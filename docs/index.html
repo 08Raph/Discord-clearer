@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Discord Message Cleaner: free Windows app to clean your messages</title>
+<meta name="description" content="Free Windows app: delete your own Discord messages in bulk, read messages people deleted in your DMs, catch ghost pings, chat with emojis, GIFs and videos. Open source.">
+<link rel="icon" href="assets/favicon.png">
+<meta property="og:title" content="Discord Message Cleaner">
+<meta property="og:description" content="Clean your own Discord messages in bulk, and see what people deleted. Free and open source.">
+<meta property="og:image" content="assets/icon.png">
+<style>
+  :root {
+    --bg: #0c0d10; --bg2: #13151a; --card: #181a20; --line: #262932;
+    --text: #e8e9ee; --muted: #9a9dab; --accent: #5865f2; --accent2: #7b86ff;
+    --red: #ed4245; --green: #23a55a; --radius: 16px;
+    --font: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 var(--font); -webkit-font-smoothing: antialiased; }
+  a { color: var(--accent2); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+  /* nav */
+  nav { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(12px); background: rgba(12,13,16,.75); border-bottom: 1px solid var(--line); }
+  nav .wrap { display: flex; align-items: center; gap: 28px; height: 64px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--text); }
+  .brand img { width: 30px; height: 30px; }
+  nav .links { margin-left: auto; display: flex; gap: 24px; font-size: 15px; }
+  nav .links a { color: var(--muted); }
+  nav .links a:hover { color: var(--text); text-decoration: none; }
+  @media (max-width: 720px) { nav .links a:not(.gh) { display: none; } }
+
+  /* hero */
+  .hero { position: relative; overflow: hidden; padding: 88px 0 40px; }
+  .hero::before { content: ""; position: absolute; inset: -200px -10% auto; height: 620px;
+    background: radial-gradient(closest-side, rgba(88,101,242,.35), transparent 70%),
+                radial-gradient(closest-side at 75% 60%, rgba(237,66,69,.18), transparent 70%);
+    pointer-events: none; }
+  .hero .wrap { position: relative; display: grid; grid-template-columns: 1.05fr 1fr; gap: 56px; align-items: center; }
+  @media (max-width: 960px) { .hero .wrap { grid-template-columns: 1fr; } }
+  .pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; font-size: 13px; color: var(--muted); background: rgba(255,255,255,.03); }
+  .pill b { color: var(--green); font-weight: 600; }
+  h1 { font-size: clamp(38px, 5.4vw, 62px); line-height: 1.05; letter-spacing: -0.02em; margin: 18px 0 18px; }
+  h1 .strike { position: relative; white-space: nowrap; }
+  h1 .strike::after { content: ""; position: absolute; left: -4px; right: -4px; top: 55%; height: 6px; border-radius: 6px; background: var(--red); transform: rotate(-6deg); }
+  .lead { font-size: 19px; color: var(--muted); max-width: 540px; margin: 0 0 30px; }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .btn { display: inline-flex; align-items: center; gap: 10px; padding: 14px 22px; border-radius: 12px; font-weight: 600; font-size: 16px; border: 1px solid transparent; cursor: pointer; transition: transform .15s, background .15s; }
+  .btn:hover { text-decoration: none; transform: translateY(-1px); }
+  .btn.primary { background: var(--accent); color: #fff; box-shadow: 0 10px 30px -10px rgba(88,101,242,.8); }
+  .btn.primary:hover { background: #4752c4; }
+  .btn.ghost { border-color: var(--line); color: var(--text); background: rgba(255,255,255,.03); }
+  .btn svg { width: 18px; height: 18px; }
+  .meta { margin-top: 14px; font-size: 13px; color: var(--muted); }
+
+  /* app mock */
+  .mock { border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: #1e1f22; box-shadow: 0 40px 80px -30px rgba(0,0,0,.8); font-size: 13px; }
+  .mock .bar { height: 30px; display: flex; align-items: center; padding: 0 12px; gap: 6px; background: #1e1f22; color: var(--muted); font-size: 12px; }
+  .mock .bar i { width: 10px; height: 10px; border-radius: 50%; background: #3a3c43; display: inline-block; }
+  .mock .body { display: grid; grid-template-columns: 52px 150px 1fr; height: 360px; }
+  .rail { background: #1e1f22; display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 8px; }
+  .rail span { width: 36px; height: 36px; border-radius: 50%; background: #313338; display: grid; place-items: center; color: #dbdee1; font-weight: 700; font-size: 12px; }
+  .rail span.on { border-radius: 12px; background: var(--accent); }
+  .rail span.del { background: var(--red); }
+  .side { background: #2b2d31; padding: 10px 8px; }
+  .side .r { display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 6px; color: #949ba4; }
+  .side .r.on { background: #404249; color: #fff; }
+  .side .r i { width: 22px; height: 22px; border-radius: 50%; flex: none; }
+  .side .badge { margin-left: auto; background: var(--red); color: #fff; border-radius: 8px; font-size: 10px; padding: 0 5px; font-weight: 700; }
+  .chat { background: #313338; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; position: relative; }
+  .m { display: flex; gap: 10px; }
+  .m .av { width: 32px; height: 32px; border-radius: 50%; flex: none; }
+  .m b { color: #f2f3f5; font-weight: 600; }
+  .m small { color: #949ba4; margin-left: 6px; font-size: 11px; }
+  .m p { margin: 2px 0 0; color: #dbdee1; }
+  .m.deleted { background: rgba(237,66,69,.12); border-left: 3px solid var(--red); margin-left: -16px; padding-left: 13px; }
+  .m.deleted .tag { color: var(--red); font-size: 10px; font-weight: 700; margin-left: 8px; }
+  .react { display: inline-flex; gap: 4px; margin-top: 4px; }
+  .react span { background: #2b2d31; border-radius: 8px; padding: 1px 7px; font-size: 12px; border: 1px solid transparent; }
+  .react span.me { background: rgba(88,101,242,.25); border-color: var(--accent); }
+  .gif { margin-top: 6px; width: 170px; height: 90px; border-radius: 8px; background: linear-gradient(120deg, #5865f2, #eb459e, #fee75c, #57f287); background-size: 300% 300%; animation: g 4s ease infinite; display: grid; place-items: end start; padding: 6px; color: #fff; font-weight: 800; font-size: 11px; }
+  @keyframes g { 0% { background-position: 0 50% } 50% { background-position: 100% 50% } 100% { background-position: 0 50% } }
+  .input { margin-top: auto; background: #383a40; border-radius: 8px; padding: 10px 12px; color: #6d6f78; }
+  .floating { position: absolute; right: 14px; top: 14px; background: #2b2d31; border: 1px solid #1e1f22; border-radius: 8px; padding: 2px 6px; display: flex; gap: 6px; }
+
+  /* sections */
+  section { padding: 84px 0; }
+  .kicker { color: var(--accent2); font-weight: 700; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; }
+  h2 { font-size: clamp(28px, 3.6vw, 42px); line-height: 1.15; letter-spacing: -0.015em; margin: 10px 0 14px; }
+  .sub { color: var(--muted); max-width: 640px; margin: 0 0 40px; font-size: 18px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }
+  .card .ico { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; font-size: 22px; background: rgba(88,101,242,.15); margin-bottom: 14px; }
+  .card.red .ico { background: rgba(237,66,69,.15); }
+  .card.green .ico { background: rgba(35,165,90,.15); }
+  .card h3 { margin: 0 0 6px; font-size: 18px; }
+  .card p { margin: 0; color: var(--muted); font-size: 15px; }
+  .alt { background: var(--bg2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+
+  .steps { counter-reset: s; display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  @media (max-width: 900px) { .steps { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px) { .steps { grid-template-columns: 1fr; } }
+  .step { counter-increment: s; padding: 22px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--card); }
+  .step::before { content: counter(s); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--accent); font-weight: 700; margin-bottom: 12px; }
+  .step h3 { margin: 0 0 6px; font-size: 17px; }
+  .step p { margin: 0; color: var(--muted); font-size: 15px; }
+
+  .compare { width: 100%; border-collapse: collapse; background: var(--card); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); }
+  .compare th, .compare td { padding: 14px 18px; text-align: left; border-bottom: 1px solid var(--line); font-size: 15px; }
+  .compare th { color: var(--muted); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; }
+  .compare td:not(:first-child), .compare th:not(:first-child) { text-align: center; width: 140px; }
+  .yes { color: var(--green); font-weight: 700; } .no { color: #5c5f6b; }
+
+  details { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; margin-bottom: 10px; }
+  summary { cursor: pointer; font-weight: 600; list-style: none; display: flex; justify-content: space-between; }
+  summary::after { content: "+"; color: var(--muted); font-size: 20px; line-height: 1; }
+  details[open] summary::after { content: "–"; }
+  details p { color: var(--muted); margin: 10px 0 0; }
+
+  .warn { border: 1px solid rgba(237,66,69,.35); background: rgba(237,66,69,.07); border-radius: var(--radius); padding: 20px 24px; color: #f0c4c5; }
+  .warn b { color: #fff; }
+  .download { text-align: center; }
+  .download .cta { justify-content: center; }
+  .tour { display: grid; grid-template-columns: 300px 1fr; gap: 28px; align-items: start; }
+  @media (max-width: 900px) { .tour { grid-template-columns: 1fr; } }
+  .tour-list { display: flex; flex-direction: column; gap: 8px; }
+  .tour-list button { text-align: left; background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; font: inherit; cursor: pointer; position: relative; overflow: hidden; }
+  .tour-list button b { display: block; font-size: 16px; }
+  .tour-list button span { color: var(--muted); font-size: 14px; }
+  .tour-list button.on { border-color: var(--accent); background: rgba(88,101,242,.12); }
+  .tour-list button .prog { position: absolute; left: 0; bottom: 0; height: 3px; width: 0; background: var(--accent); }
+  .tour-list button.on .prog { animation: prog 6s linear forwards; }
+  @keyframes prog { to { width: 100%; } }
+  .tour-view { border-radius: 14px; overflow: hidden; border: 1px solid var(--line); box-shadow: 0 30px 70px -30px rgba(0,0,0,.8); background: #1e1f22; aspect-ratio: 1280 / 760; }
+  .tour-view img { width: 100%; display: block; transition: opacity .35s; }
+  .caption { color: var(--muted); font-size: 13px; margin-top: 10px; }
+  .langs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .langs span { border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 14px; color: var(--muted); }
+  footer { padding: 40px 0 60px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 28px; justify-content: space-between; }
+  code { background: #1f2128; padding: 2px 6px; border-radius: 6px; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#"><img src="assets/icon.png" alt=""> Discord Message Cleaner</a>
+    <div class="links">
+      <a href="#features">Features</a>
+      <a href="#tour">Tour</a>
+      <a href="#how">How it works</a>
+      <a href="changelog.html">Changelog</a>
+      <a href="#faq">FAQ</a>
+      <a class="gh js-repo" href="#">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div>
+      <span class="pill"><b>●</b> Free &amp; open source · Windows 10/11 · 5 languages · <span class="js-version">v7.1.0</span></span>
+      <h1>Your messages,<br><span class="strike">forever</span> your choice.</h1>
+      <p class="lead">Delete your own Discord messages in bulk, read what people deleted in your DMs, catch ghost pings, and chat with real emojis, GIFs and videos. All from one app that feels like Discord.</p>
+      <div class="cta">
+        <a class="btn primary js-dl-zip" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 21h16"/></svg>
+          Download for Windows
+        </a>
+        <a class="btn ghost js-dl-setup" href="#">Setup wizard</a>
+      </div>
+      <div class="meta">No account needed to try it: click <b>Try the demo</b> in the app.</div>
+    </div>
+
+    <div class="mock" aria-hidden="true">
+      <div class="bar"><i></i><i></i><i></i>&nbsp; Discord Message Cleaner</div>
+      <div class="body">
+        <div class="rail"><span class="on">@</span><span class="del">⊘</span><span>GS</span><span>AC</span></div>
+        <div class="side">
+          <div class="r on"><i style="background:#f0b232"></i>Alex</div>
+          <div class="r"><i style="background:#eb459e"></i>Sam <span class="badge">2</span></div>
+          <div class="r"><i style="background:#23a55a"></i>Maya</div>
+          <div class="r"><i style="background:#5865f2"></i>Study group</div>
+          <div class="r"><i style="background:#ed4245"></i>Leo</div>
+        </div>
+        <div class="chat">
+          <div class="floating">😂 👍 ↩ 🔖</div>
+          <div class="m"><i class="av" style="background:#f0b232"></i><div><b>Alex</b><small>Today at 3:14 PM</small><p>did you see the clip 😭</p>
+            <div class="gif">GIF</div>
+            <div class="react"><span class="me">🔥 3</span><span>💀 1</span></div></div></div>
+          <div class="m deleted"><i class="av" style="background:#f0b232"></i><div><b>Alex</b><span class="tag">DELETED 3:16 PM</span><p>wait don't read that</p></div></div>
+          <div class="m"><i class="av" style="background:#5865f2"></i><div><b>You</b><small>Today at 3:17 PM</small><p>too late 👀</p></div></div>
+          <div class="input">Message @Alex</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <div class="kicker">Features</div>
+    <h2>Everything Discord doesn't give you</h2>
+    <p class="sub">A Discord-style window with superpowers. Everything stays on your PC: your token only ever goes to discord.com.</p>
+    <div class="grid">
+      <div class="card red"><div class="ico">🧹</div><h3>Bulk delete your messages</h3><p>Tick DMs, channels, threads or whole servers. Filter by keywords, dates, pictures, links. Preview in red before anything is deleted.</p></div>
+      <div class="card red"><div class="ico">⊘</div><h3>See deleted messages</h3><p>Someone deleted a message in your DMs? You can still read it, with what it said before it was edited.</p></div>
+      <div class="card"><div class="ico">👻</div><h3>Ghost ping catcher</h3><p>Someone @mentioned you in a server and deleted it right away? You'll know who, where and what they said.</p></div>
+      <div class="card"><div class="ico">💔</div><h3>Friend list alerts</h3><p>Get told when you're no longer friends with someone, even if it happened while your PC was off.</p></div>
+      <div class="card green"><div class="ico">💬</div><h3>Chat like in Discord</h3><p>Send, reply, edit, upload files, paste screenshots and react. New messages and "typing…" appear live.</p></div>
+      <div class="card green"><div class="ico">🎞️</div><h3>GIFs &amp; videos play</h3><p>Tenor GIFs loop, videos play inline, emojis and reactions look like Discord's, including custom server emojis.</p></div>
+      <div class="card"><div class="ico">🔖</div><h3>Saved messages</h3><p>Bookmark any message. It stays on your PC, even if it gets deleted on Discord later.</p></div>
+      <div class="card"><div class="ico">📦</div><h3>Every chat you ever used</h3><p>Import your Discord data package to find closed DMs and old chats, then clean them too.</p></div>
+      <div class="card"><div class="ico">✎</div><h3>See unedited messages</h3><p>When someone edits a message, you still see what it said before, right under it.</p></div>
+      <div class="card green"><div class="ico">🗂️</div><h3>Automatic backups</h3><p>Save a full copy of chosen chats every day or week, with pictures and files. The newest copies are kept.</p></div>
+      <div class="card"><div class="ico">🖼️</div><h3>Media gallery</h3><p>Every picture, video, file and link ever posted in a chat, in one place.</p></div>
+      <div class="card"><div class="ico">🌍</div><h3>5 languages</h3><p>English, Français, Español, Português and Deutsch. Picked automatically from Windows.</p></div>
+      <div class="card"><div class="ico">🍓</div><h3>Always-on option</h3><p>Run the tiny logger on a Raspberry Pi or Android phone to catch deleted messages 24/7, even when your PC is off.</p></div>
+      <div class="card green"><div class="ico">🩺</div><h3>Check my setup</h3><p>One click tests everything (Discord, emojis, videos, logger) and gives you a report to copy if you need help.</p></div>
+      <div class="card"><div class="ico">🪶</div><h3>Light in the background</h3><p>Lives next to the clock when closed. The background logger uses about 20–30 MB of RAM and almost no CPU.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="alt" id="tour">
+  <div class="wrap">
+    <div class="kicker">Tour</div>
+    <h2>A look inside</h2>
+    <p class="sub">Click a step, or let it play.</p>
+    <div class="tour">
+      <div class="tour-list">
+        <button class="on" data-i="1"><b>Chat like in Discord</b><span>GIFs, videos, reactions, edits shown with their original text</span><i class="prog"></i></button>
+        <button data-i="2"><b>Pick what to clean</b><span>Filters highlight exactly what will be deleted</span><i class="prog"></i></button>
+        <button data-i="3"><b>Deleted messages &amp; ghost pings</b><span>Even what changed while your PC was off</span><i class="prog"></i></button>
+        <button data-i="4"><b>Media gallery</b><span>Every picture, video, file and link of a chat</span><i class="prog"></i></button>
+      </div>
+      <div>
+        <div class="tour-view"><img id="tour-img" src="assets/screen-1.png" alt="The app's chat view"></div>
+        <div class="caption">Illustrations of the app's screens (names and messages are made up).</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="kicker">How it works</div>
+    <h2>Up and running in two minutes</h2>
+    <p class="sub">No install needed with the single .exe. Or use the setup wizard for a Start menu shortcut and a clean uninstall.</p>
+    <div class="steps">
+      <div class="step"><h3>Download</h3><p>Get the zip, unzip it, double-click <code>DiscordMessageCleaner.exe</code>.</p></div>
+      <div class="step"><h3>Log in</h3><p>Paste your token (the app shows you how to find it), or try the demo first.</p></div>
+      <div class="step"><h3>Pick chats</h3><p>Browse your DMs and servers like in Discord and tick what to clean.</p></div>
+      <div class="step"><h3>Clean</h3><p>Run a dry run to see what would go, then press Start. Pause or stop any time.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="kicker">Compared</div>
+    <h2>What you get vs. the Discord app</h2>
+    <table class="compare">
+      <tr><th>Feature</th><th>Discord</th><th>This app</th></tr>
+      <tr><td>Delete many of your messages at once</td><td class="no">✕</td><td class="yes">✓</td></tr>
+      <tr><td>Read messages people deleted in your DMs</td><td class="no">✕</td><td class="yes">✓</td></tr>
+      <tr><td>Ghost ping detection</td><td class="no">✕</td><td class="yes">✓</td></tr>
+      <tr><td>Know when you lose a friend</td><td class="no">✕</td><td class="yes">✓</td></tr>
+      <tr><td>Bookmarks that survive deletion</td><td class="no">✕</td><td class="yes">✓</td></tr>
+      <tr><td>See what a message said before it was edited</td><td class="no">✕</td><td class="yes">✓</td></tr>
+      <tr><td>Scheduled chat backups</td><td class="no">✕</td><td class="yes">✓</td></tr>
+      <tr><td>Export whole conversations (HTML / text)</td><td class="no">✕</td><td class="yes">✓</td></tr>
+      <tr><td>Chat, react, GIFs, videos</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+    </table>
+  </div>
+</section>
+
+<section class="alt" id="faq">
+  <div class="wrap">
+    <div class="kicker">FAQ</div>
+    <h2>Good questions</h2>
+    <details><summary>Is it free?</summary><p>Yes, 100% free and open source (MIT license). No ads, no account, no payments.</p></details>
+    <details><summary>Where does my token go?</summary><p>Only to discord.com. Saved accounts are encrypted with Windows' own protection (DPAPI) and only work on your PC. The code is public on GitHub so anyone can check.</p></details>
+    <details><summary>Can my account get banned?</summary><p>Discord's Terms of Service don't allow automation on user accounts. Most people use tools like this without problems, but there's always a risk. Use it at your own risk and don't spam.</p></details>
+    <details><summary>Can it see messages deleted while my PC was off?</summary><p>Partly. When your PC turns back on, it finds messages it had already seen that were deleted or edited meanwhile. To catch everything 24/7, you can run the small logger on an always-on device (old laptop, Raspberry Pi, Android with Termux) and import its file.</p></details>
+    <details><summary>Windows says "Windows protected your PC"</summary><p>That's SmartScreen. It shows up for new apps that aren't signed with a paid certificate. Click <b>More info → Run anyway</b>. You can also build the .exe yourself from the source code.</p></details>
+    <details><summary>Which languages?</summary><p>English, French, Spanish, Portuguese and German. Change it in Settings ⚙ → Language.</p></details>
+    <details><summary>Something doesn't work. What do I do?</summary><p>In the app: Settings ⚙ → <b>Check my setup</b>. It tests everything and gives you a report you can copy into a GitHub issue.</p></details>
+    <details><summary>Does it slow down my games?</summary><p>No. The background part sleeps until Discord sends something: a tiny signal every ~41 seconds plus your messages.</p></details>
+  </div>
+</section>
+
+<section class="download" id="download">
+  <div class="wrap">
+    <h2>Take back your message history</h2>
+    <p class="sub" style="margin-left:auto;margin-right:auto">Free for Windows 10 and 11.</p>
+    <div class="langs" style="justify-content:center;margin:-20px 0 30px"><span>English</span><span>Français</span><span>Español</span><span>Português</span><span>Deutsch</span></div>
+    <div class="cta">
+      <a class="btn primary js-dl-zip" href="#">Download the .exe (zip)</a>
+      <a class="btn ghost js-dl-setup" href="#">Setup wizard</a>
+      <a class="btn ghost js-repo" href="#">Source code</a>
+    </div>
+    <div class="warn" style="margin-top:40px;text-align:left">
+      <b>Please read:</b> this app only deletes <b>your own</b> messages, and deleted messages can't be recovered. It's not made by or affiliated with Discord Inc. Using automation on a user account goes against Discord's Terms of Service and could get your account limited or banned. Never share your token with anyone.
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>© <span class="js-year">2026</span> 08Raph · MIT license</span>
+    <span>Not affiliated with Discord Inc.</span>
+    <span><a class="js-repo" href="#">GitHub</a> · <a href="changelog.html">Changelog</a> · <a class="js-issues" href="#">Report a problem</a></span>
+  </div>
+</footer>
+
+<script>
+  // Works on any GitHub Pages address: https://OWNER.github.io/REPO/
+  (function () {
+    var owner = "08Raph", repo = "DiscordMessageCleaner";
+    var m = location.hostname.match(/^([^.]+)\.github\.io$/i);
+    if (m) {
+      owner = m[1];
+      var p = location.pathname.split("/").filter(Boolean);
+      if (p.length) repo = p[0];
+    }
+    var base = "https://github.com/" + owner + "/" + repo;
+    var latest = base + "/releases/latest";
+    function set(cls, href) {
+      document.querySelectorAll(cls).forEach(function (a) { a.href = href; });
+    }
+    set(".js-repo", base); set(".js-issues", base + "/issues");
+    set(".js-dl-zip", latest); set(".js-dl-setup", latest);
+    document.querySelector(".js-year").textContent = new Date().getFullYear();
+    fetch("https://api.github.com/repos/" + owner + "/" + repo + "/releases/latest")
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (rel) {
+        if (!rel) return;
+        if (rel.tag_name) document.querySelectorAll(".js-version").forEach(function (e) { e.textContent = rel.tag_name; });
+        (rel.assets || []).forEach(function (a) {
+          if (/\.zip$/i.test(a.name)) set(".js-dl-zip", a.browser_download_url);
+          if (/setup.*\.exe$/i.test(a.name)) set(".js-dl-setup", a.browser_download_url);
+        });
+      })
+      .catch(function () {});
+  })();
+</script>
+<script>
+  (function () {
+    var btns = document.querySelectorAll(".tour-list button"), img = document.getElementById("tour-img");
+    var i = 1, timer;
+    for (var n = 2; n <= 4; n++) { var pre = new Image(); pre.src = "assets/screen-" + n + ".png"; }
+    function show(k, auto) {
+      i = k;
+      btns.forEach(function (b) { b.classList.remove("on"); void b.offsetWidth; });
+      btns[k - 1].classList.add("on");
+      img.style.opacity = 0;
+      setTimeout(function () { img.src = "assets/screen-" + k + ".png"; img.style.opacity = 1; }, 180);
+      clearTimeout(timer);
+      timer = setTimeout(function () { show(i % 4 + 1, true); }, 6000);
+    }
+    btns.forEach(function (b) { b.addEventListener("click", function () { show(+b.dataset.i); }); });
+    timer = setTimeout(function () { show(2, true); }, 6000);
+  })();
+</script>
+</body>
+</html>
