@@ -1,0 +1,5 @@
+# What the app needs (the build scripts install these for you)
+pillow>=10
+opencv-python-headless>=4.8   # plays videos and Tenor/Giphy GIFs inside the app
+pystray>=0.19                 # icon next to the clock (keep running when closed)
+pyinstaller>=6.3              # only to build the .exe

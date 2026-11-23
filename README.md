@@ -1,0 +1,222 @@
+# Discord Message Cleaner
+
+A free Windows app that deletes **your own** Discord messages from DMs, group DMs and servers,
+in a window that works like Discord.
+
+> Not affiliated with or endorsed by Discord Inc. Using automation on a user account goes
+> against Discord's Terms of Service and may get your account limited or banned.
+> Use at your own risk. Deleted messages cannot be recovered.
+
+**Website:** see `docs/` (GitHub Pages) · **Download:** the Releases page
+
+## What's new in 7.1
+- **See unedited messages**: the original text of an edited message shows under it, in
+  yellow. Works in every chat you have open, and in DMs even when the app was closed
+  (the logger keeps it)
+- **Always-on logger in one command** for a Raspberry Pi / Linux PC or an Android phone
+  (`server/`). It starts by itself after a reboot and writes a file every 10 minutes; the app
+  imports it automatically (**Auto-import a synced file…**)
+- **Search and export all deleted messages** (HTML, text and JSON)
+- **Muted chats**: tell the logger to ignore noisy groups or bots
+- **Scheduled backups**: Auto-clean rules → **Back up these chats on a schedule** (daily or
+  weekly, keeps the 4 newest copies, works when the app is closed too)
+- **Media gallery**: Chat ▾ → **Media, files and links…**
+- **Check my setup**: Settings ⚙ → one-click diagnostics with a report you can copy
+- **New languages**: Español, Português, Deutsch (5 in total)
+- Website: tour with screenshots and a changelog page
+
+## What's new in 7.0
+- **Chat from the app**: send, reply, edit (or press ↑), upload files, paste screenshots
+  (Ctrl+V), emoji picker. New messages, edits, reactions and "typing…" show up live, and
+  unread DMs get a red badge
+- **Emojis and reactions like Discord**: colour emoji pictures (the same Twemoji set Discord
+  uses), custom and animated server emojis inside the text, big emojis, reaction pills you
+  can click, see who reacted, add any reaction from the hover toolbar
+- **GIFs and videos play**: Tenor/Giphy GIFs loop, videos play inline with a seek bar
+  (🔊 Sound opens them in your video player), animated WebP too
+- **Rich text**: **bold**, *italic*, __underline__, ~~strike~~, `code`, spoilers you click,
+  headers, lists, clickable links, @mentions and #channels
+- **Keeps running next to the clock** when you close the window (Settings ⚙ → App behaviour),
+  with Windows notifications
+- **Things Discord doesn't give you**: ghost-ping catcher, "no longer friends" alerts,
+  🔖 saved messages that survive deletion, deleted messages stay visible in red in open chats
+- **Offline catch-up**: when your PC turns back on, the logger finds messages that were
+  deleted or edited while it was off (for messages it had already seen). To catch everything
+  24/7, run the logger on an always-on device and import its file (see below)
+- **Sharp icon** at every size (taskbar, title bar, Alt-Tab) and an optional sharp mode for
+  scaled screens
+
+## Features
+**Easy to start**
+- **Try the demo (no account)**: a pretend account with sample DMs, servers, threads,
+  pictures and reactions. Nothing real is touched, so it's also perfect for recording a video
+- **First-time tour**: 5 short tips that show where everything is (Settings ⚙ → Show the tour
+  again)
+- **English, French, Spanish, Portuguese and German** (Settings ⚙ → Language; picked
+  automatically from Windows)
+
+**Looks and works like Discord**
+- Dark title bar, server bar with rounded icons, DMs with profile pictures, channels by
+  category, threads and forum posts, your account at the bottom
+- **Themes**: Dark, Black (OLED) and Light (Settings ⚙)
+- **Ctrl+K quick switcher**, smooth scrolling, **hold the mouse wheel** to auto-scroll
+- **Ctrl+F: find words in a chat**, jump between matches, or **search the whole chat** with
+  Discord search and jump straight to any old message
+
+**Conversation preview**
+- Messages like in Discord: date dividers, mentions, code blocks, quotes, link cards, reactions
+- **Pictures, animated GIFs, video thumbnails, stickers and big emojis**. Click a picture to
+  open it big and save it
+- Messages that would be deleted are **highlighted in red**, live as you change the filters
+- **Only my messages**, **Jump to a date**, **Statistics** (messages per month, your most used
+  words, when you write) in the **Chat ▾** menu
+- **Right-click a message** to delete just that one, **keep** it, or copy it
+
+**Cleaning**
+- Tick DMs, channels, **threads**, or **whole servers**
+- **Data package import** finds every chat you've ever used, including closed DMs
+- **Keywords** with 3 match modes: **Whole word**, **Starts with** (`hello` → hellos),
+  **Anywhere**, plus **caps matter**
+- **More filters**: with files, with pictures, with links, only replies, message length,
+  **older than N days**, date range, keep pinned, max per chat
+- **Also remove my reactions** from everyone's messages
+- **Close DMs / leave group DMs** when they're cleaned
+- Discord search for speed, **Auto speed**, 1–5 chats at once, **Pause / Resume**,
+  **continue after closing the app**
+- **Auto-clean rules**: e.g. every day, delete my messages older than 30 days in these chats.
+  They run while the app is open and, if you want, every day at 3 AM even when it's closed
+  (Windows Task Scheduler)
+
+**Deleted messages logger**
+- Turn it on in the red ⊘ section: it runs in the background (no window) and saves messages
+  people delete in your DMs and group DMs, so you can still read them. Edits keep the
+  original text too
+- Only messages that arrive while it's on can be saved (Discord doesn't keep deleted
+  messages). Your own messages and servers are ignored. Everything stays on your PC
+- Very light: one connection that sleeps until Discord sends something (a heartbeat every
+  ~41 s), no window, no polling. Pictures are only downloaded if you turn that on
+- Optional **Start with Windows**; keeps recent messages for 7 days by default
+- Also catches **ghost pings** in servers (only messages that @mention you are kept) and
+  tells you when you lose a friend (Activity)
+
+### Running the logger on an always-on device (optional)
+Discord erases deleted messages, so something must be online when a message arrives. To
+cover the hours your PC is off, run the logger on a Raspberry Pi / Linux machine
+(`bash server/install_linux.sh`) or an Android phone with Termux
+(`bash server/install_termux.sh`). See `server/README.md`. Then sync its export file to
+your PC (Syncthing is free) and pick it once with **Auto-import a synced file…** in the
+⊘ section. Only do this on a device you own: your token gives full access to your account.
+
+**Saving**
+- **Save whole conversations** (everyone's messages + pictures + files, works offline),
+  for one chat, all ticked chats, or automatically before deleting
+- Quick export to HTML or TXT, JSON backup of everything deleted
+
+**Accounts and safety**
+- **Several saved accounts** (Remember me), switch in one click
+- Tokens are encrypted with your Windows account and never written to the log
+- **Log file** and **Report a problem** (Settings ⚙) so users can send you what went wrong
+- Counts how many messages you've cleaned in total; flashes the taskbar when a run ends
+
+## Install
+Run `DiscordMessageCleaner-Setup-7.1.0.exe` and follow the wizard (no admin rights needed),
+or unzip `DiscordMessageCleaner_v7.1.0_windows.zip` and run the .exe.
+It adds a Start menu shortcut, an optional desktop icon, and an uninstaller.
+
+## How to use
+1. Paste your token and press **Connect**. Tick **Remember me** to skip this next time.
+   Get your token in your browser: discord.com/app → F12 → Network → filter `api` →
+   click a chat → click a request → Headers → Request Headers → copy the value next to
+   `authorization`. Never share it. Changing your password resets it.
+2. Click DMs and channels to preview them, and tick the ones you want to clean.
+   For closed DMs and old chats, open **Data package** (green icon) and import your package.
+3. Set your filters (the preview shows what matches in red) and press **Preview**.
+4. If it looks right, untick **Preview only** and press **Delete messages**.
+
+### Getting your data package
+Discord → User Settings → Data & Privacy → **Request all of my Data** (tick Messages).
+Discord emails you a download link, sometimes after a few days. Import the .zip as it is.
+Messages in servers you've left can't be deleted. The app skips those chats.
+
+## Publish on GitHub (website + automatic .exe builds)
+1. Create a **public** repository (e.g. `DiscordMessageCleaner`) and upload everything in
+   this folder (drag and drop on github.com works, including the hidden `.github` folder:
+   use **Add file → Upload files** and drag the whole folder content).
+2. **Website**: Settings → Pages → Source: *Deploy from a branch* → Branch `main`, folder
+   `/docs` → Save. After a minute it's live at `https://YOUR-NAME.github.io/REPO/`.
+   The download buttons find your latest release by themselves.
+3. **The .exe**: Releases → *Draft a new release* → tag `v7.1.0` → Publish. GitHub builds
+   the single .exe zip and the setup wizard on a Windows machine (Actions tab, ~5 min) and
+   attaches them to the release. Free for public repos. Next version: change `VERSION` in
+   `app.py` (+ `version_info.txt`, `installer.iss`) and publish a new tag.
+
+## Build it yourself
+Install Python 3.10+ from python.org (tick "Add python.exe to PATH"). The scripts install
+everything from `requirements.txt` (Pillow, OpenCV for videos, pystray for the tray icon).
+- `build_exe.bat` builds the app into `dist\DiscordMessageCleaner\`
+- `build_installer.bat` builds the app and the setup wizard into `installer_output\`
+  (needs the free [Inno Setup 6](https://jrsoftware.org/isdl.php))
+- `build_single_exe.bat` builds ONE .exe file into `dist_single\` that you can move anywhere
+  (easiest to share, but gets more antivirus false alarms)
+
+> With `build_exe.bat`, keep `DiscordMessageCleaner.exe` together with its `_internal` folder.
+> Moving the .exe alone gives "Failed to start embedded python interpreter".
+
+The app is built as a folder rather than a single .exe because single-file PyInstaller apps
+get far more antivirus false alarms. Publishing the source code (e.g. on GitHub) next to the
+installer lets people check that the token only goes to discord.com.
+
+## Recording a how-to video
+Use the demo so no real account or token appears on screen:
+1. Start the app and press **Try the demo (no account)**.
+2. Record with **Win + Alt + R** (Xbox Game Bar) or the Snipping Tool's video mode
+   (**Win + Shift + S** → record), or [OBS](https://obsproject.com) for more control.
+3. Suggested 60-second plan:
+   - 0-10 s: the Discord-style window, click a server, open a thread (⋯)
+   - 10-25 s: open a DM, scroll, type `hello` in Keywords, show the red highlights, switch
+     between Whole word / Starts with
+   - 25-40 s: tick 2 DMs, press **Preview**, then untick Preview only and **Delete messages**
+   - 40-50 s: **Chat ▾ → Statistics**, then **Ctrl+F**
+   - 50-60 s: Settings ⚙ → themes and language
+4. For a GIF, convert the video with [ScreenToGif](https://www.screentogif.com) (free).
+
+## Privacy
+- Your token is only sent to discord.com. Pictures load from cdn.discordapp.com without it.
+- "Remember me" stores the token with Windows DPAPI: it can't be read on another PC or by
+  another Windows user. Other programs running as you could still decrypt it, so only use it
+  on your own PC. **Log out** deletes it.
+- Emoji pictures load from cdn.jsdelivr.net (Twemoji), without your token.
+- Settings, saved accounts, keep list, rules, logs, saved deleted messages, bookmarks and resume info are in
+  `%APPDATA%\DiscordMessageCleaner`. Picture and video cache: `%LOCALAPPDATA%\DiscordMessageCleaner`.
+  The uninstaller offers to remove them.
+
+## Files
+| File | What it is |
+|---|---|
+| `app.py` | The window |
+| `widgets.py` | Discord-style widgets (avatars, checkboxes, scrolling lists) |
+| `cleaner_core.py` | Filters, Discord requests, search, export (no GUI code) |
+| `package.py` | Reads the Discord data package |
+| `i18n.py`, `i18n_keys.py`, `lang_es.py`, `lang_pt.py`, `lang_de.py` | Interface languages |
+| `demo.py` | Sample account for the demo mode |
+| `securestore.py` | Saved accounts, encrypted with Windows DPAPI |
+| `main.py` | Starts the app, or a background mode without loading the window |
+| `rules.py` | Auto-clean rules and the `--run-rules` mode for Task Scheduler |
+| `gateway.py` | Small real-time Discord connection (standard library only) |
+| `logger_service.py`, `msglog.py` | Deleted-messages logger (`--logger`) and its local database |
+| `applog.py` | Log file and crash reports (tokens are masked) |
+| `build_exe.bat`, `version_info.txt` | Builds the app with PyInstaller (folder) |
+| `build_single_exe.bat` | Builds a single portable .exe |
+| `build_installer.bat`, `installer.iss`, `installer_info.txt` | Builds the setup wizard |
+| `richtext.py`, `emojis.py` | Discord-style message text, emoji pictures and the emoji picker list |
+| `media.py` | Video / GIF player (OpenCV) |
+| `tray.py` | Icon next to the clock (pystray) |
+| `tools/make_icon.py` | Draws the icons at every size (sharp everywhere) |
+| `docs/` | The website (GitHub Pages): `index.html`, `changelog.html`, screenshots |
+| `server/` | Always-on logger setup for Raspberry Pi / Linux and Android |
+| `.github/workflows/build.yml` | Builds the .exe + setup on GitHub when you publish a release |
+| `requirements.txt` | Python packages the app uses |
+| `icon.ico`, `icon*.png` | App icons |
+
+## License
+MIT. See `LICENSE`.

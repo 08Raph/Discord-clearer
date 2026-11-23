@@ -1,0 +1,10 @@
+Discord Message Cleaner deletes YOUR OWN Discord messages from DMs, group DMs and servers.
+
+Please read before installing:
+
+- Deleted messages cannot be recovered. Always run a Preview first.
+- Using automation on a user account goes against Discord's Terms of Service.
+  Your account could be limited or banned. You use this app at your own risk.
+- Your token is only sent to discord.com. It is never saved unless you tick
+  "Remember me", and then it's encrypted with your Windows account.
+- This app is not made by, affiliated with, or endorsed by Discord Inc.
