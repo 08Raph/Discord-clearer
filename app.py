@@ -28,6 +28,7 @@ import securestore
 import emojis
 import media
 import richtext
+import social
 import widgets
 from richtext import MessageText
 from widgets import (BLURPLE, BLURPLE_HI, BORDER, CHAT, CHECK_INHERIT, CODE_BG, CODE_BORDER,
@@ -43,12 +44,12 @@ i18n.install()            # must run before any widget is created
 core.LANG = i18n.LANG
 
 APP_NAME = "Discord Message Cleaner"
-VERSION = "7.1.0"
+VERSION = "7.4.0"
 PREVIEW_PAGE = 50
 LOCAL = ("pkg", "deleted")      # previews that come from a local list, not from Discord
 EDIT_BAR = "#f0b232"
 LIVE_EVENTS = {"MESSAGE_CREATE", "MESSAGE_UPDATE", "MESSAGE_DELETE", "MESSAGE_REACTION_ADD",
-               "MESSAGE_REACTION_REMOVE", "TYPING_START"}
+               "MESSAGE_REACTION_REMOVE", "TYPING_START"} | social.SOCIAL_EVENTS
 
 PACKAGE_HELP = (
     "Your Discord data package lists EVERY chat you've ever sent a message in, including "
@@ -218,7 +219,7 @@ class DemoBound:
         return self.data.request(method, path, body, files)
 
 
-class App(tk.Tk):
+class App(social.SocialMixin, social.MoreSocialMixin, tk.Tk):
     def __init__(self):
         super().__init__()
         self.title(f"{APP_NAME} v{VERSION}")
@@ -659,6 +660,10 @@ class App(tk.Tk):
         self.build_sidebar_shell()
         self.build_chat()
         self.build_cleaner()
+        self._cleaner_packed = True
+        if not self.clean_mode():
+            self.cleaner.pack_forget()
+            self._cleaner_packed = False
         if not self._logger_poll:
             self._logger_poll = True
             self.after(1500, self.poll_logger)
@@ -667,14 +672,19 @@ class App(tk.Tk):
             self._rule_timer.start()
         self.open_view("dms")
         self.on_selection_changed()
+        self.open_friends("online")
+        self.bind_social_keys()
+        self.after(300, self.reopen_last_chat)
 
     # ---------------------------------------------------------------- rail
     def build_rail(self):
         inner = self.rail.inner
         self.rail_item(inner, "dms", "Direct Messages", None, "@", BLURPLE, home=True)
-        self.rail_item(inner, "pkg", "Data package (every chat you ever used)", None, "▤",
-                       PKG_COLOR)
-        self.rail_item(inner, "deleted", "Deleted messages (people's deleted DMs)", None, "⊘",
+        if self.clean_mode():
+            self.rail_item(inner, "pkg", "Data package (every chat you ever used)", None, "▤",
+                           PKG_COLOR)
+        if self.settings.get("show_deleted_view", True) is not False:
+            self.rail_item(inner, "deleted", "Deleted messages (people's deleted DMs)", None, "⊘",
                        RED)
         tk.Frame(inner, bg=DIVIDER, height=2, width=32).pack(pady=6)
         for g in self.guilds:
@@ -717,6 +727,8 @@ class App(tk.Tk):
                 av.set_shape("circle")
                 pill.place_forget()
         av.bind("<Button-1>", lambda e: self.open_view(key))
+        if not home and key not in ("pkg", "deleted"):
+            av.bind("<Button-3>", lambda e: self.mute_menu(e, key, name))
         av.bind("<Enter>", enter, add="+")
         av.bind("<Leave>", leave, add="+")
         Tooltip(av, lambda: name, notr=not home and key not in ("pkg", "deleted"))
@@ -742,6 +754,10 @@ class App(tk.Tk):
                 has = ("server", key) in self.checked or any(
                     k[0] == "channel" and self.channel_guild.get(k[1]) == key
                     for k in self.checked)
+                mark = self.server_mark(key)
+                if mark:
+                    av.set_badge(True, mark)
+                    continue
             av.set_badge(has)
 
     # ---------------------------------------------------------------- sidebar
@@ -757,13 +773,19 @@ class App(tk.Tk):
         if me.get("id"):
             self.images.load(core.user_avatar_url(me), 32, av)
         av.set_badge(True)
-        txt = tk.Frame(up, bg=USERBAR)
+        self.me_avatar = av
+        txt = tk.Frame(up, bg=USERBAR, cursor="hand2")
         txt.pack(side="left", fill="x", expand=True)
-        tk.Label(txt, notr=True, text=self.my_name(), bg=USERBAR, fg=WHITE, font=(FONT, 10, "bold"),
-                 anchor="w").pack(fill="x", pady=(8, 0))
-        self.user_status = tk.Label(txt, text=self.user_status_text(), bg=USERBAR, fg=MUTED,
-                                    font=(FONT, 8),
-                 anchor="w").pack(fill="x")
+        self.me_name_label = tk.Label(txt, notr=True, text=self.my_name(), bg=USERBAR, fg=WHITE,
+                                      font=(FONT, 10, "bold"), anchor="w", cursor="hand2")
+        self.me_name_label.pack(fill="x", pady=(8, 0))
+        self.user_status = tk.Label(txt, notr=True, text=self.user_status_text(), bg=USERBAR,
+                                    fg=MUTED, font=(FONT, 8), anchor="w", cursor="hand2")
+        self.user_status.pack(fill="x")
+        for w in (av, txt, self.me_name_label, self.user_status):
+            w.bind("<Button-1>", self.open_status_menu)
+        Tooltip(txt, lambda: "Set your status")
+        self.update_user_panel()
         gear = tk.Label(up, text="⚙", bg=USERBAR, fg=MUTED, font=(FONT, 13), cursor="hand2")
         gear.pack(side="right", padx=(0, 10))
         gear.bind("<Button-1>", lambda e: self.open_settings())
@@ -778,6 +800,7 @@ class App(tk.Tk):
     def open_view(self, view, rebuild=False):
         """Show a sidebar view. Views are built once and kept (switching is instant)."""
         self.view = view
+        self.clear_server_unread(view)
         for v, f in self.view_frames.items():
             if v != view:
                 f.pack_forget()
@@ -837,8 +860,9 @@ class App(tk.Tk):
         if prefix:
             tk.Label(row, text=prefix, bg=SIDEBAR, fg=MUTED, font=(FONT, 13)).pack(
                 side="left", padx=(8, 4), pady=3)
+        row.avatar = av if avatar is not None else None
         chk = Check(row, SIDEBAR, command=lambda: self.toggle(key))
-        if checkable:
+        if checkable and self.clean_mode():
             chk.pack(side="right", padx=(4, 8))
         if on_expand is not None:
             ex = tk.Label(row, text="⋯", bg=SIDEBAR, fg=MUTED, font=(FONT, 11, "bold"),
@@ -854,6 +878,9 @@ class App(tk.Tk):
         if checkable:
             self.check_widgets.setdefault(key, []).append(chk)
         self.row_frames[key] = row
+        if key[0] in ("dm", "channel", "link"):
+            for w in [row] + list(row.winfo_children()):
+                w.bind("<Button-3>", lambda e, k=key, n=name: self.mute_menu(e, k[1], n), add="+")
 
         def enter(_):
             if self.open_key != key:
@@ -884,10 +911,12 @@ class App(tk.Tk):
         box.pack(fill="x", padx=10, pady=10)
         self.dm_search.bind("<KeyRelease>", lambda e: self.filter_dms())
 
+        self.friends_row(self.vp)
         top = tk.Frame(self.vp, bg=SIDEBAR)
         top.pack(fill="x", padx=16, pady=(14, 4))
         section_label(top, f"Direct messages  ({len(self.dms)})").pack(side="left")
-        LinkLabel(top, "Select all", self.select_all_dms, SIDEBAR, font_size=8).pack(side="right")
+        if self.clean_mode():
+            LinkLabel(top, "Select all", self.select_all_dms, SIDEBAR, font_size=8).pack(side="right")
 
         self.dm_list = ScrollFrame(self.vp, SIDEBAR)
         self.dm_list.pack(fill="both", expand=True)
@@ -918,6 +947,7 @@ class App(tk.Tk):
                     row.pack_forget()
             self.update_checks()
             self.mark_open_row()
+            self.update_presence_dots()
             if start + chunk < len(self.dms):
                 self.after(1, lambda: add_rows(start + chunk, chunk))
 
@@ -962,6 +992,10 @@ class App(tk.Tk):
     def store(self):
         if self.logger_store is None:
             self.logger_store = msglog.Store()
+            try:
+                self.logger_store.prune_deleted(int(self.settings.get("deleted_keep_days", 0) or 0))
+            except Exception:
+                pass
         return self.logger_store
 
     def build_deleted_sidebar(self):
@@ -1002,6 +1036,25 @@ class App(tk.Tk):
         days.configure(command=lambda: self.set_setting("logger_days", spin_int(days) or 7, True))
         days.bind("<FocusOut>", lambda e: self.set_setting("logger_days", spin_int(days) or 7,
                                                            True))
+        kr = tk.Frame(body, bg=SIDEBAR)
+        kr.pack(fill="x", pady=(6, 0))
+        tk.Label(kr, text="Keep deleted messages for", bg=SIDEBAR, fg=TEXT, font=(FONT, 9)).pack(
+            side="left")
+        kdays = self.spin(kr, 0, 3650, 1, 5)
+        kdays.pack(side="left", padx=6)
+        self.set_spin(kdays, self.settings.get("deleted_keep_days", 0))
+        tk.Label(kr, text="days (0 = forever)", bg=SIDEBAR, fg=TEXT, font=(FONT, 9)).pack(
+            side="left")
+
+        def keep_changed(_e=None):
+            n = spin_int(kdays) or 0
+            self.set_setting("deleted_keep_days", n, True)
+            if n:
+                removed = self.store().prune_deleted(n)
+                if removed:
+                    self.log(i18n.tr(f"Removed {removed} saved deleted message(s) older than {n} days."))
+        kdays.configure(command=keep_changed)
+        kdays.bind("<FocusOut>", keep_changed)
         for key, label in (("logger_ghost", "Catch ghost pings in servers"),
                            ("logger_friends", "Tell me when I lose a friend"),
                            ("logger_catchup", "Check what changed while my PC was off")):
@@ -1031,6 +1084,10 @@ class App(tk.Tk):
         LinkLabel(links, "Muted chats…", self.open_ignore_list, SIDEBAR,
                   font_size=8).pack(anchor="w")
         LinkLabel(links, "Export all deleted messages…", self.export_all_deleted, SIDEBAR,
+                  font_size=8).pack(anchor="w")
+        LinkLabel(links, "Export edit history…", self.export_edit_history, SIDEBAR,
+                  font_size=8).pack(anchor="w")
+        LinkLabel(links, "📊 Dashboard", self.open_dashboard, SIDEBAR,
                   font_size=8).pack(anchor="w")
         sbox, self.deleted_search = entry_box(body, "Search deleted messages", bg=INPUT,
                                               font_size=9)
@@ -1482,7 +1539,9 @@ class App(tk.Tk):
 
         def work():
             try:
-                chans = core.list_guild_channels(self.make_api(), gid)
+                api = self.make_api()
+                chans = core.list_guild_channels(api, gid)
+                richtext.ROLES.update(core.list_guild_roles(api, gid))
                 self.after(0, lambda: self.on_channels(gid, chans))
             except Exception as e:
                 msg = str(e)
@@ -1823,7 +1882,24 @@ class App(tk.Tk):
         self.chat_sub.pack(side="left", padx=(12, 0))
         self.marks_btn = tk.Label(head, text="🔖", bg=CHAT, fg=MUTED, font=("Segoe UI Emoji", 12),
                                   cursor="hand2")
+        self.clean_btn = tk.Label(head, text="🧹", bg=CHAT, fg=RED if self.clean_mode() else MUTED,
+                                  font=("Segoe UI Emoji", 13), cursor="hand2")
+        self.clean_btn.pack(side="right", padx=(0, 14))
+        self.clean_btn.bind("<Button-1>", lambda e: self.toggle_clean_mode())
+        Tooltip(self.clean_btn, lambda: "Show or hide the cleaning tools")
         self.marks_btn.pack(side="right", padx=(0, 12))
+        self.pins_btn = tk.Label(head, text="📌", bg=CHAT, fg=MUTED, font=("Segoe UI Emoji", 12),
+                                 cursor="hand2")
+        self.pins_btn.bind("<Button-1>", lambda e: self.open_pins())
+        Tooltip(self.pins_btn, lambda: "Pinned messages")
+        self.call_btn = tk.Label(head, text="📞", bg=CHAT, fg=MUTED, font=("Segoe UI Emoji", 12),
+                                 cursor="hand2")
+        self.call_btn.bind("<Button-1>", lambda e: self.call_open_chat())
+        Tooltip(self.call_btn, lambda: "Start a call (opens Discord)")
+        self.members_btn = tk.Label(head, text="👥", bg=CHAT, fg=MUTED, font=("Segoe UI Emoji", 12),
+                                    cursor="hand2")
+        self.members_btn.bind("<Button-1>", lambda e: self.open_members())
+        Tooltip(self.members_btn, lambda: "Members")
         self.marks_btn.bind("<Button-1>", lambda e: self.open_bookmarks())
         Tooltip(self.marks_btn, lambda: "Saved messages")
         self.export_btn = FlatButton(head, "Chat ▾", self.export_chat, bg=SELECTED,
@@ -1886,6 +1962,7 @@ class App(tk.Tk):
         self.editing = None
         self._typing_sent = 0
         self._typing_users = {}
+        self.setup_composer_extras(box, emo)
         self.hint_shortcut = tk.Label(box, text="Ctrl+K  find a chat", bg=FIELD_BG,
                                       fg=PLACEHOLDER, font=(FONT, 8))
         self.hint_shortcut.pack(side="right", padx=14)
@@ -1928,8 +2005,9 @@ class App(tk.Tk):
                  font=(FONT, 46)).pack()
         tk.Label(box, text=text or "Click a DM or channel on the left to preview it here.",
                  bg=CHAT, fg=MUTED, font=(FONT, 11)).pack(pady=(8, 2))
-        tk.Label(box, text="Your messages that match the filters are highlighted in red.",
-                 bg=CHAT, fg=MUTED, font=(FONT, 9)).pack()
+        if self.clean_mode():
+            tk.Label(box, text="Your messages that match the filters are highlighted in red.",
+                     bg=CHAT, fg=MUTED, font=(FONT, 9)).pack()
 
     def toggle_open_chat(self):
         if self.open_key:
@@ -1993,6 +2071,8 @@ class App(tk.Tk):
         except (tk.TclError, TypeError, ValueError):
             pass
         self.composer.configure(height=min(10, max(1, lines)))
+        if e is None or e.keysym not in ("Up", "Down", "Return", "Tab", "Escape"):
+            self.mention_check()
         text = self.composer.get("1.0", "end-1c")
         if text and e is not None and e.keysym not in ("Return", "Escape", "Up", "Down") \
                 and time.time() - self._typing_sent > 8 and self.demo is None:
@@ -2002,6 +2082,9 @@ class App(tk.Tk):
                              daemon=True).start()
 
     def on_composer_enter(self, e):
+        if self.mention_visible():
+            self.mention_pick()
+            return "break"
         if e.state & 0x0001:            # Shift+Enter = new line
             return None
         self.send_composer()
@@ -2009,6 +2092,9 @@ class App(tk.Tk):
 
     def on_composer_up(self, e):
         """Up arrow in an empty box edits your last message (like Discord)."""
+        if self.mention_visible():
+            self.mention_move(-1)
+            return "break"
         if self.composer.get("1.0", "end-1c"):
             return None
         mine = [r["msg"] for r in self.msg_rows
@@ -2119,7 +2205,7 @@ class App(tk.Tk):
     def send_composer(self):
         if not self.can_chat():
             return
-        text = self.composer.get("1.0", "end-1c").strip()
+        text = self.mention_convert(self.composer.get("1.0", "end-1c").strip())
         files = list(self.composer_files)
         p = self.preview
         cid = p["channel_id"]
@@ -2196,6 +2282,8 @@ class App(tk.Tk):
 
         def run():
             sess = gateway.GatewaySession(token, on_event, stop.is_set, log=applog.write)
+            sess.presence = self.presence_payload()
+            self.live_session = sess
             sess.run_forever()
         bg_threading.Thread(target=run, daemon=True).start()
 
@@ -2207,6 +2295,9 @@ class App(tk.Tk):
 
     def on_live_event(self, t, d):
         if self.main_frame is None:
+            return
+        if t in social.SOCIAL_EVENTS:
+            self.on_social_event(t, d)
             return
         p = self.preview
         open_live = bool(p and p.get("source") == "live" and not p.get("jumped"))
@@ -2323,9 +2414,13 @@ class App(tk.Tk):
 
     def mark_unread(self, m):
         cid = m.get("channel_id")
+        if m.get("guild_id") and cid not in self.row_frames:
+            self.server_unread(m)
+            return
         self.unread[cid] = self.unread.get(cid, 0) + 1
+        self.update_title()
         row = self.row_frames.get(("dm", cid)) or self.row_frames.get(("channel", cid))
-        if row is not None:
+        if row is not None and self.mute_of(cid, m.get("guild_id")) != "all":
             self.set_row_badge(row, self.unread[cid])
         is_dm = not m.get("guild_id")
         if is_dm:
@@ -2338,8 +2433,11 @@ class App(tk.Tk):
                     pass
             author = m.get("author") or {}
             name = author.get("global_name") or author.get("username", "?")
-            self.notify(name, (m.get("content") or i18n.tr("sent an attachment"))[:120],
-                        flash=True)
+            if self.should_notify(m):
+                self.notify(name, (m.get("content") or i18n.tr("sent an attachment"))[:120],
+                            flash=True)
+        else:
+            self.server_unread(m)
 
     def set_row_badge(self, row, n):
         try:
@@ -2362,6 +2460,7 @@ class App(tk.Tk):
 
     def clear_unread(self, cid):
         if self.unread.pop(cid, None):
+            self.update_title()
             row = self.row_frames.get(("dm", cid)) or self.row_frames.get(("channel", cid))
             if row is not None:
                 self.set_row_badge(row, 0)
@@ -2562,17 +2661,30 @@ class App(tk.Tk):
             else f"≈ {p['count']:,} of your messages")
 
     def update_chat_header_check(self):
+        live = bool(self.preview and self.preview.get("source") == "live")
+        for w in (self.pins_btn, self.call_btn, self.members_btn):
+            w.pack_forget()
         if not self.open_key:
             self.head_check_frame.pack_forget()
             self.export_btn.pack_forget()
             self.count_label.pack_forget()
             return
-        if self.open_key[0] == "deleted":
+        clean = self.clean_mode()
+        if self.open_key[0] == "deleted" or not clean:
             self.head_check_frame.pack_forget()
         else:
             self.head_check_frame.pack(side="right", padx=16)
         self.export_btn.pack(side="right", padx=(0, 4))
-        self.count_label.pack(side="right", padx=(0, 14))
+        if live:
+            if self.open_key[0] == "channel":
+                self.members_btn.pack(side="right", padx=(0, 10))
+            self.pins_btn.pack(side="right", padx=(0, 10))
+            if self.open_key[0] in ("dm", "link"):
+                self.call_btn.pack(side="right", padx=(0, 10))
+        if clean:
+            self.count_label.pack(side="right", padx=(0, 14))
+        else:
+            self.count_label.pack_forget()
         st = self.check_state(self.open_key)
         self.head_check.set(st)
         self.head_check_label.configure(
@@ -2591,6 +2703,8 @@ class App(tk.Tk):
 
     def open_chat(self, key, channel_id, title, icon, avatar_url, user_id, server=None):
         self.open_key = key
+        self.after_idle(self.mark_friends_row)
+        self.remember_last_chat(key, channel_id, title, icon, avatar_url, user_id, server)
         self.clear_unread(channel_id)
         if self.find_bar.winfo_ismapped():
             self.close_find()
@@ -2603,6 +2717,7 @@ class App(tk.Tk):
         self.set_input_hint(icon, title)
         self.mark_open_row()
         self.update_chat_header_check()
+        self.after_idle(self.update_chat_header_check)
         self.messages.clear()
         tk.Label(self.messages.inner, text="Loading messages…", bg=CHAT, fg=MUTED,
                  font=(FONT, 10)).pack(pady=40)
@@ -2772,6 +2887,8 @@ class App(tk.Tk):
             name = author.get("global_name") or author.get("username", "?")
             av = Avatar(left, 40, CHAT, core.initials(name)[:1], color_for(author.get("id")))
             av.pack(pady=(3, 0))
+            av.configure(cursor="hand2")
+            av.bind("<Button-1>", lambda e, a=author: self.open_profile(a))
             if author.get("id"):
                 self.images.load(core.user_avatar_url(author), 40, av)
             ref = m.get("referenced_message")
@@ -2784,12 +2901,14 @@ class App(tk.Tk):
             line = tk.Frame(content, bg=CHAT)
             line.pack(fill="x")
             is_me = self.me and author.get("id") == self.me.get("id")
-            tk.Label(line, notr=True, text=name, bg=CHAT, fg=WHITE, font=(FONT, 10, "bold")).pack(
-                side="left")
+            nl = tk.Label(line, notr=True, text=name, bg=CHAT, fg=WHITE, font=(FONT, 10, "bold"),
+                          cursor="hand2")
+            nl.pack(side="left")
+            nl.bind("<Button-1>", lambda e, a=author: self.open_profile(a))
             if author.get("bot"):
                 tk.Label(line, text=" APP ", bg=BLURPLE, fg="white",
                          font=(FONT, 7, "bold")).pack(side="left", padx=(5, 0))
-            if is_me:
+            if is_me and self.clean_mode():
                 tk.Label(line, text="  you", bg=CHAT, fg=GREEN, font=(FONT, 8, "bold")).pack(
                     side="left")
             tk.Label(line, text="  " + core.format_time(m.get("timestamp")), bg=CHAT,
@@ -3718,10 +3837,24 @@ class App(tk.Tk):
             menu.add_separator()
         menu.add_command(label="Copy text", command=lambda: self.copy_text(m))
         menu.add_command(label="Copy message ID", command=lambda: self.copy_text(m, True))
+        if m.get("channel_id") and not str(m.get("id", "")).startswith("pkg"):
+            menu.add_command(label="Copy message link", command=lambda: self.copy_link(m))
         try:
             menu.tk_popup(event.x_root, event.y_root)
         finally:
             menu.grab_release()
+
+    def copy_link(self, m):
+        self.clipboard_clear()
+        self.clipboard_append(core.message_link(m, self.channel_guild.get(m.get("channel_id"))))
+        self.set_status(i18n.tr("Message link copied."))
+
+    def update_title(self):
+        n = sum(self.unread.values()) if getattr(self, "unread", None) else 0
+        try:
+            self.title((f"({n}) " if n else "") + f"{APP_NAME} v{VERSION}")
+        except tk.TclError:
+            pass
 
     def copy_text(self, m, msg_id=False):
         self.clipboard_clear()
@@ -3740,6 +3873,9 @@ class App(tk.Tk):
         m = info["msg"]
         if self.running:
             messagebox.showinfo(APP_NAME, "Wait for the cleaner to finish first.")
+            return
+        if self.settings.get("undo_delete", True) is not False:
+            self.delete_with_undo(info)
             return
         preview = core.render_content(m)[:120] or "[attachment]"
         if not messagebox.askyesno("Delete message?", f"Delete this message?\n\n{preview}\n\n"
@@ -3891,12 +4027,16 @@ class App(tk.Tk):
 
         def work():
             if p.get("source") in LOCAL:
-                hits = [m for m in reversed(p["all"]) if q.lower() in (m["content"] or "").lower()]
+                words = core.parse_search(q, self.chat_people(), (self.me or {}).get("id"))[0]
+                hits = [m for m in reversed(p["all"])
+                        if words.lower() in (m["content"] or "").lower()]
                 total = len(hits)
             else:
                 gid = self.channel_guild.get(p["channel_id"]) if p["key"][0] == "channel" \
                     else None
-                total, hits = core.search_text(self.make_api(), p["channel_id"], q, gid)
+                total, hits = core.search_text(self.make_api(), p["channel_id"], q, gid,
+                                               people=self.chat_people(),
+                                               me_id=(self.me or {}).get("id"))
             self.after(0, lambda: show(total, hits))
 
         def show(total, hits):
@@ -4236,6 +4376,7 @@ class App(tk.Tk):
             return
         flt = self.current_filter()
         my_id = self.me["id"]
+        clean = self.clean_mode()
         count = mine = 0
         for r in self.msg_rows:
             m = r["msg"]
@@ -4243,6 +4384,8 @@ class App(tk.Tk):
             mine += is_mine
             if m.get("_deleted"):
                 state = "removed"
+            elif not clean:
+                state = None
             elif is_mine and m.get("id") in self.keep_ids:
                 state = "keep"
             elif flt.matches(m, my_id) and flt.in_dates(m):
@@ -4781,8 +4924,18 @@ class App(tk.Tk):
             sw.pack()
             sw.bind("<Button-1>", lambda e, n=name: self.set_theme(n, top))
 
+        FlatButton(b, "Edit my profile (display name, About me, status)…",
+                   lambda: (top.destroy(), self.open_profile_editor()), bg=SELECTED, hover=HOVER,
+                   font_size=9, padx=10, pady=5).pack(anchor="w", pady=(8, 0))
         section_label(b, "App behaviour", CHAT).pack(anchor="w", pady=(18, 6))
         for key, label, default, after in (
+                ("show_cleaner", "Show the cleaning tools (delete panel, checkboxes, red "
+                                 "highlights)", True, self.apply_clean_mode),
+                ("show_deleted_view", "Show Deleted messages (⊘) in the server bar", True,
+                 self.apply_clean_mode),
+                ("reopen_last", "Open the last chat when the app starts", True, None),
+                ("undo_delete", "Give me 10 seconds to undo when I delete one message", True,
+                 None),
                 ("close_to_tray", "Keep running next to the clock when I close the window",
                  True, self.apply_tray_setting),
                 ("notifications", "Show notifications (new DMs, deleted messages, ghost pings)",
@@ -5223,7 +5376,7 @@ class App(tk.Tk):
             self.settings["total_deleted"] = int(self.settings.get("total_deleted", 0) or 0) + n
             self.save_settings()
             try:
-                self.user_status.configure(text=self.user_status_text())
+                self.update_user_panel()
             except (tk.TclError, AttributeError):
                 pass
         if results is not None:

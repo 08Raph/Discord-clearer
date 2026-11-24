@@ -43,6 +43,7 @@ class DemoApi:
         self.guilds = []
         self.guild_channels = {}
         self.threads = {}
+        self.relationships = {}
         now = datetime.now()
         n = 0
 
@@ -80,6 +81,12 @@ class DemoApi:
             out.sort(key=lambda m: -int(m["id"]))
             self.messages[cid] = out
 
+        for i, (u, _g) in enumerate(_PEOPLE):
+            kind = 3 if u == "nina" else 4 if u == "leo" else 1
+            self.relationships[self.users[u]["id"]] = {"id": self.users[u]["id"], "type": kind,
+                                                       "user": self.users[u]}
+        self.presence = {self.users["alex"]["id"]: "online", self.users["sam"]["id"]: "idle",
+                         self.users["jordan"]["id"]: "dnd"}
         # DMs
         for i, (u, g) in enumerate(_PEOPLE):
             cid = str(300000000000000000 + i)
@@ -122,13 +129,55 @@ class DemoApi:
         params = dict(kv.split("=", 1) for kv in q.split("&") if "=" in kv)
         parts = p.strip("/").split("/")
         if p == "/users/@me":
+            if method == "PATCH":
+                ME.update({k: v for k, v in (body or {}).items() if k == "global_name"})
             return 200, ME
+        if p in ("/users/@me/settings", "/users/@me/profile"):
+            if method == "PATCH" and p.endswith("profile"):
+                ME["bio"] = (body or {}).get("bio", "")
+            return 200, {"bio": ME.get("bio", "")}
+        if p == "/users/@me/relationships":
+            if method == "POST":
+                name = (body or {}).get("username", "")
+                if name not in self.users:
+                    return 400, {"message": "Unknown user"}
+                u = self.users[name]
+                self.relationships.setdefault(u["id"], {"id": u["id"], "type": 4, "user": u})
+                return 204, None
+            return 200, list(self.relationships.values())
+        if parts[:3] == ["users", "@me", "relationships"] and len(parts) == 4:
+            r = self.relationships.get(parts[3])
+            if method == "DELETE":
+                self.relationships.pop(parts[3], None)
+                return 204, None
+            if method == "PUT":
+                if (body or {}).get("type") == 2:
+                    u = r["user"] if r else {"id": parts[3], "username": "user"}
+                    self.relationships[parts[3]] = {"id": parts[3], "type": 2, "user": u}
+                elif r:
+                    r["type"] = 1
+                return 204, None
+        if len(parts) == 3 and parts[0] == "users" and parts[2] == "profile":
+            u = next((x for x in self.users.values() if x["id"] == parts[1]), ME)
+            return 200, {"user": dict(u, bio=u.get("bio") or f"Hi, I'm {u['global_name']} (demo profile)."),
+                         "mutual_guilds": [{"id": g["id"]} for g in self.guilds[:2]]}
+        if parts[0] == "channels" and len(parts) == 3 and parts[2] == "pins":
+            return 200, [m for m in self.messages.get(parts[1], []) if m.get("pinned")]
+        if p == "/users/@me/channels" and method == "POST":
+            rid = (body or {}).get("recipient_id")
+            for c in self.channels.values():
+                if c["type"] == 1 and c["recipients"][0]["id"] == rid:
+                    return 200, c
+            return 404, None
         if p == "/users/@me/channels":
             return 200, [c for c in self.channels.values() if c["type"] in (1, 3)]
         if parts[0] == "channels" and parts[-1] == "typing":
             return 204, None
         if p == "/users/@me/guilds":
             return 200, self.guilds
+        if len(parts) == 3 and parts[0] == "guilds" and parts[2] == "roles":
+            return 200, [{"id": parts[1], "name": "@everyone", "color": 0},
+                         {"id": "77" + parts[1][-4:], "name": "Moderators", "color": 0x3BA55C}]
         if len(parts) == 3 and parts[0] == "guilds" and parts[2] == "channels":
             return 200, self.guild_channels.get(parts[1], [])
         if len(parts) == 4 and parts[0] == "guilds" and parts[2:] == ["threads", "active"]:

@@ -34,6 +34,9 @@ TOKEN_RE = re.compile(
     re.S)
 
 
+ROLES = {}   # role id -> (name, colour int); filled when a server's channels load
+
+
 def parse(text, mentions=None, resolve_channel=None):
     """Turn message text into segments: (kind, value, styles, extra)."""
     names = {u["id"]: (u.get("global_name") or u.get("username", "user"))
@@ -74,7 +77,8 @@ def _inline(text, styles, out, names, resolve_channel):
             uid = re.sub(r"\D", "", g)
             out.append(("text", "@" + names.get(uid, "user"), styles | {"mention"}, None))
         elif kind == "role":
-            out.append(("text", "@role", styles | {"mention"}, None))
+            name, _colour = ROLES.get(re.sub(r"\D", "", g), ("role", 0))
+            out.append(("text", "@" + name, styles | {"mention"}, None))
         elif kind == "chan":
             cid = re.sub(r"\D", "", g)
             name = resolve_channel(cid) if resolve_channel else None

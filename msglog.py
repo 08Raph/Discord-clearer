@@ -140,6 +140,14 @@ class Store:
                     out.setdefault(mid, []).append(old)
         return out
 
+    def all_edits(self, account):
+        """Every earlier version of edited messages: [{message_id, channel_id, old, at}]."""
+        with self.lock:
+            rows = self.db.execute(
+                "SELECT message_id, channel_id, old, at FROM edits WHERE account=? "
+                "ORDER BY message_id, at", (account,)).fetchall()
+        return [{"message_id": r[0], "channel_id": r[1], "old": r[2], "at": r[3]} for r in rows]
+
     def search_deleted(self, account, text, limit=500):
         like = f"%{text}%"
         with self.lock:
@@ -279,6 +287,27 @@ class Store:
             self.db.execute("DELETE FROM cache WHERE created < ?", (cutoff,))
             self.db.commit()
         for (atts,) in rows:      # remove saved pictures of messages nobody deleted
+            for a in json.loads(atts or "[]"):
+                if a.get("local"):
+                    try:
+                        os.remove(os.path.join(files_dir(), os.path.basename(a["local"])))
+                    except OSError:
+                        pass
+        return len(rows)
+
+    def prune_deleted(self, keep_days):
+        """Forget saved deleted messages (and their pictures) older than keep_days.
+        keep_days 0 or less keeps them forever. Returns removed rows."""
+        if not keep_days or keep_days <= 0:
+            return 0
+        cutoff = time.time() - keep_days * 86400
+        with self.lock:
+            rows = self.db.execute("SELECT attachments FROM deleted WHERE deleted_at < ?",
+                                   (cutoff,)).fetchall()
+            self.db.execute("DELETE FROM deleted WHERE deleted_at < ?", (cutoff,))
+            self.db.execute("DELETE FROM events WHERE at < ?", (cutoff,))
+            self.db.commit()
+        for (atts,) in rows:
             for a in json.loads(atts or "[]"):
                 if a.get("local"):
                     try:

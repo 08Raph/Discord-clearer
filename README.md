@@ -9,6 +9,39 @@ in a window that works like Discord.
 
 **Website:** see `docs/` (GitHub Pages) · **Download:** the Releases page
 
+## What's new in 7.4
+- **Mute** any DM, channel or server, or get **only @mentions** (right-click it). Servers show an
+  unread mark and turn red when you're mentioned. **Ctrl+Shift+M** mutes the open chat.
+- **@mention suggestions** while you type, and a **GIF picker** (Discord's own Tenor search).
+- **Search with filters** like Discord: `from:` `mentions:` `has:link/image/file/video` `before:`
+  `after:` `during:` `pinned:true`.
+- **Members** (👥) for server channels: the people active in the channel, with their status.
+- **Undo** for 10 seconds after deleting one message.
+- Opens your **last chat** on start. **Alt+↑ / Alt+↓** move between chats.
+- Logger **dashboard** (deleted messages and ghost pings per day, who deletes the most) and
+  **edit-history export**.
+
+## What's new in 7.3
+- **Use it as your everyday Discord.** The 🧹 button in the chat header (or Settings) hides every
+  cleaning tool: the delete panel, checkboxes, red highlights and the Data package icon. The ⊘
+  Deleted messages icon can be hidden separately.
+- **Friends page** as the home screen: Online / All / Pending / Blocked, Add Friend, accept, ignore,
+  remove, block and unblock. Friends show a green / yellow / red status dot.
+- **Your status**: click your name at the bottom left for Online, Idle, Do Not Disturb, Invisible
+  and a custom status.
+- **Profile cards**: click a name or avatar for their About me, mutual servers and buttons to
+  message, call, add or block.
+- **Pinned messages** (📌) and **Edit my profile** (display name, About me, status).
+- **Calls** open in the Discord app (or discord.com): Discord's encrypted voice can't run inside
+  this app.
+
+## What's new in 7.2
+- Role mentions show the role's real name (for example @Moderators).
+- Right-click a message → **Copy message link**.
+- Unread messages are counted in the window title.
+- Logger: **Keep deleted messages for N days** (0 = forever); the always-on logger applies it too.
+- There's also a web version that runs in the browser: <https://github.com/08Raph/Discord-web-cleaner>.
+
 ## What's new in 7.1
 - **See unedited messages**: the original text of an edited message shows under it, in
   yellow. Works in every chat you have open, and in DMs even when the app was closed
@@ -119,8 +152,8 @@ your PC (Syncthing is free) and pick it once with **Auto-import a synced file…
 - Counts how many messages you've cleaned in total; flashes the taskbar when a run ends
 
 ## Install
-Run `DiscordMessageCleaner-Setup-7.1.0.exe` and follow the wizard (no admin rights needed),
-or unzip `DiscordMessageCleaner_v7.1.0_windows.zip` and run the .exe.
+Run `DiscordMessageCleaner-Setup-7.4.0.exe` and follow the wizard (no admin rights needed),
+or unzip `DiscordMessageCleaner_v7.4.0_windows.zip` and run the .exe.
 It adds a Start menu shortcut, an optional desktop icon, and an uninstaller.
 
 ## How to use
@@ -145,7 +178,7 @@ Messages in servers you've left can't be deleted. The app skips those chats.
 2. **Website**: Settings → Pages → Source: *Deploy from a branch* → Branch `main`, folder
    `/docs` → Save. After a minute it's live at `https://YOUR-NAME.github.io/REPO/`.
    The download buttons find your latest release by themselves.
-3. **The .exe**: Releases → *Draft a new release* → tag `v7.1.0` → Publish. GitHub builds
+3. **The .exe**: Releases → *Draft a new release* → tag `v7.4.0` → Publish. GitHub builds
    the single .exe zip and the setup wizard on a Windows machine (Actions tab, ~5 min) and
    attaches them to the release. Free for public repos. Next version: change `VERSION` in
    `app.py` (+ `version_info.txt`, `installer.iss`) and publish a new tag.
