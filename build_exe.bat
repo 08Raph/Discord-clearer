@@ -30,6 +30,10 @@ echo Building (folder build: fewer antivirus false alarms than a single .exe)...
   --hidden-import media ^
   --hidden-import richtext ^
   --hidden-import social ^
+  --hidden-import everyday ^
+  --hidden-import archive ^
+  --hidden-import planner ^
+  --hidden-import safety ^
   --hidden-import emojis ^
   --hidden-import i18n_keys ^
   --hidden-import lang_es ^

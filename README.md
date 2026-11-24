@@ -9,6 +9,28 @@ in a window that works like Discord.
 
 **Website:** see `docs/` (GitHub Pages) · **Download:** the Releases page
 
+## What's new in 7.6: everyday tools
+
+Click **✦** in the server bar (or the tray icon) for tools that make the app useful every day:
+
+- **Archive and search**: keep a copy of your chats on this PC and search them offline (words,
+  "exact phrases", a person, dates, only your messages). It only reads, slowly, and keeps itself
+  up to date every 6 hours while the app is open. Backups made by the app can be imported.
+- **Your year**: messages you sent, active days, best streak, busiest hour, by hour/month, who
+  talks to you most, your words and emojis. Save it as a page to share.
+- **Reminders**: right-click a message → Remind me about this (20 min, 1 h, tonight, tomorrow,
+  or type "6pm", "tomorrow 9am", "45m").
+- **Send later**: write a message, click 🕓. Sent at that time while the app is open (tray is fine).
+  If the app was closed, it waits as *missed*: nothing is ever sent by surprise.
+- **Saved replies**: type `;name` then Tab, or click 📝.
+- **Keyword alerts**: notification + inbox when someone says one of your words (`/regex/` works).
+- **Privacy sweeper**: leave servers, close old DMs, find friends you haven't talked to in months.
+- **Safe mode** (on by default): rules delete one chat at a time, at least 2.5 s apart with random
+  pauses and a daily limit (300); sweeper actions wait 2–14 random seconds with small daily limits.
+  Using automation on a user account is against Discord's terms and no tool can make the risk
+  zero; safe mode keeps it as low as it can.
+- **Quick account switching** from your status menu, and **Start with Windows** (opens in the tray).
+
 ## What's new in 7.5
 - **Calls, pins and people joining** show like in Discord ("Alex started a call that lasted 5
   minutes.", "You missed a call from Alex.") instead of "[system message]".
@@ -160,8 +182,8 @@ your PC (Syncthing is free) and pick it once with **Auto-import a synced file…
 - Counts how many messages you've cleaned in total; flashes the taskbar when a run ends
 
 ## Install
-Run `DiscordMessageCleaner-Setup-7.5.0.exe` and follow the wizard (no admin rights needed),
-or unzip `DiscordMessageCleaner_v7.5.0_windows.zip` and run the .exe.
+Run `DiscordMessageCleaner-Setup-7.6.0.exe` and follow the wizard (no admin rights needed),
+or unzip `DiscordMessageCleaner_v7.6.0_windows.zip` and run the .exe.
 It adds a Start menu shortcut, an optional desktop icon, and an uninstaller.
 
 ## How to use
@@ -186,7 +208,7 @@ Messages in servers you've left can't be deleted. The app skips those chats.
 2. **Website**: Settings → Pages → Source: *Deploy from a branch* → Branch `main`, folder
    `/docs` → Save. After a minute it's live at `https://YOUR-NAME.github.io/REPO/`.
    The download buttons find your latest release by themselves.
-3. **The .exe**: push to `main` with a new VERSION in app.py (or publish a release with tag `v7.5.0`). GitHub builds
+3. **The .exe**: push to `main` with a new VERSION in app.py (or publish a release with tag `v7.6.0`). GitHub builds
    the single .exe zip and the setup wizard on a Windows machine (Actions tab, ~5 min) and
    attaches them to the release. Free for public repos. Next version: change `VERSION` in
    `app.py` (+ `version_info.txt`, `installer.iss`) and publish a new tag.
@@ -252,6 +274,11 @@ Use the demo so no real account or token appears on screen:
 | `richtext.py`, `emojis.py` | Discord-style message text, emoji pictures and the emoji picker list |
 | `media.py` | Video / GIF player (OpenCV) |
 | `tray.py` | Icon next to the clock (pystray) |
+| `social.py` | Friends, status, profiles, pins, mutes, mentions, GIFs, customize |
+| `everyday.py` | Everyday tools window: archive, recap, reminders, send later, snippets, alerts, sweeper |
+| `archive.py` | Local searchable archive (SQLite full-text search) and "Your year" |
+| `planner.py` | Reminders, scheduled messages, saved replies, keyword alerts (JSON files) |
+| `safety.py` | Safe mode: random pauses and daily limits for automatic actions |
 | `tools/make_icon.py` | Draws the icons at every size (sharp everywhere) |
 | `docs/` | The website (GitHub Pages): `index.html`, `changelog.html`, screenshots |
 | `server/` | Always-on logger setup for Raspberry Pi / Linux and Android |

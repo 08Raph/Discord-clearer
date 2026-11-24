@@ -26,6 +26,7 @@ import package
 import rules
 import securestore
 import emojis
+import everyday
 import media
 import richtext
 import social
@@ -44,7 +45,7 @@ i18n.install()            # must run before any widget is created
 core.LANG = i18n.LANG
 
 APP_NAME = "Discord Message Cleaner"
-VERSION = "7.5.0"
+VERSION = "7.6.0"
 PREVIEW_PAGE = 50
 LOCAL = ("pkg", "deleted")      # previews that come from a local list, not from Discord
 EDIT_BAR = "#f0b232"
@@ -219,7 +220,8 @@ class DemoBound:
         return self.data.request(method, path, body, files)
 
 
-class App(social.SocialMixin, social.MoreSocialMixin, social.CustomizeMixin, tk.Tk):
+class App(social.SocialMixin, social.MoreSocialMixin, social.CustomizeMixin,
+          everyday.EverydayMixin, tk.Tk):
     def __init__(self):
         super().__init__()
         self.title(f"{APP_NAME} v{VERSION}")
@@ -676,6 +678,8 @@ class App(social.SocialMixin, social.MoreSocialMixin, social.CustomizeMixin, tk.
         self.on_selection_changed()
         self.open_friends("online")
         self.bind_social_keys()
+        self.bind_everyday_keys()
+        self.start_everyday()
         self.after(300, self.reopen_last_chat)
 
     # ---------------------------------------------------------------- rail
@@ -688,6 +692,15 @@ class App(social.SocialMixin, social.MoreSocialMixin, social.CustomizeMixin, tk.
         if self.settings.get("show_deleted_view", True) is not False:
             self.rail_item(inner, "deleted", "Deleted messages (people's deleted DMs)", None, "⊘",
                        RED)
+        tools = tk.Frame(inner, bg=RAIL)
+        tools.pack(pady=4)
+        tav = Avatar(tools, 48, RAIL, "✦", CHAT, font_size=16)
+        tav.pack(padx=12)
+        tav.configure(cursor="hand2")
+        tav.bind("<Button-1>", lambda e: self.open_tools())
+        tav.bind("<Enter>", lambda e: tav.set_shape("rounded", GREEN), add="+")
+        tav.bind("<Leave>", lambda e: tav.set_shape("circle"), add="+")
+        Tooltip(tav, lambda: "Everyday tools: archive, reminders, send later, alerts…")
         tk.Frame(inner, bg=DIVIDER, height=2, width=32).pack(pady=6)
         for g in self.guilds:
             self.rail_item(inner, g["id"], g["name"], g.get("icon"), core.initials(g["name"]),
@@ -1965,6 +1978,7 @@ class App(social.SocialMixin, social.MoreSocialMixin, social.CustomizeMixin, tk.
         self._typing_sent = 0
         self._typing_users = {}
         self.setup_composer_extras(box, emo)
+        self.setup_everyday_composer(box)
         self.hint_shortcut = tk.Label(box, text="Ctrl+K  find a chat", bg=FIELD_BG,
                                       fg=PLACEHOLDER, font=(FONT, 8))
         self.hint_shortcut.pack(side="right", padx=14)
@@ -2313,6 +2327,11 @@ class App(social.SocialMixin, social.MoreSocialMixin, social.CustomizeMixin, tk.
                 self.update_typing()
             elif not mine:
                 self.mark_unread(d)
+            if not mine:
+                try:
+                    self.check_keyword(d)
+                except Exception as e:
+                    applog.write(f"Keyword alert failed: {e}")
         elif t == "MESSAGE_UPDATE" and here and d.get("id") in self.row_by_id:
             m = self.row_by_id[d["id"]]["msg"]
             self.remember_edit(m, d)
@@ -3872,6 +3891,16 @@ class App(social.SocialMixin, social.MoreSocialMixin, social.CustomizeMixin, tk.
             menu.add_command(label="Remove from this list",
                              command=lambda: self.forget_deleted(m["id"]))
             menu.add_separator()
+        if m.get("channel_id") and not str(m.get("id", "")).startswith("pkg") and \
+                self.preview and self.preview.get("source") not in LOCAL:
+            self.add_remind_menu(menu, m)
+        if (m.get("content") or "").strip():
+            menu.add_command(label="Save the text as a saved reply",
+                             command=lambda: self.open_snippets(m.get("content") or ""))
+        if self.preview and self.preview.get("source") == "live" and \
+                not self.archive().has_chat(self.me_id(), self.preview.get("channel_id")):
+            menu.add_command(label="Archive this chat", command=self.archive_open_chat)
+        menu.add_separator()
         menu.add_command(label="Copy text", command=lambda: self.copy_text(m))
         menu.add_command(label="Copy message ID", command=lambda: self.copy_text(m, True))
         if m.get("channel_id") and not str(m.get("id", "")).startswith("pkg"):
@@ -4963,6 +4992,9 @@ class App(social.SocialMixin, social.MoreSocialMixin, social.CustomizeMixin, tk.
             sw.bind("<Button-1>", lambda e, n=name: self.set_theme(n, top))
         self.build_customize(b, top)
 
+        FlatButton(b, "Everyday tools (archive, reminders, send later, alerts, safe mode)…",
+                   lambda: (top.destroy(), self.open_tools()), font_size=9, padx=10,
+                   pady=5).pack(anchor="w", pady=(8, 0))
         FlatButton(b, "Edit my profile (display name, About me, status)…",
                    lambda: (top.destroy(), self.open_profile_editor()), bg=SELECTED, hover=HOVER,
                    font_size=9, padx=10, pady=5).pack(anchor="w", pady=(8, 0))
@@ -5259,6 +5291,9 @@ class App(social.SocialMixin, social.MoreSocialMixin, social.CustomizeMixin, tk.
             self.job = None
         self.stop_event.clear()
         self.pause_event.clear()
+        if getattr(self, "_running_rule", None) is not None and not opts.dry_run:
+            import safety
+            safety.harden_pacer(self.pacer, stop=self.on_safety_limit)
         self.running = True
         self.current_dry = opts.dry_run
         self.current_max = opts.max_delete
@@ -5512,8 +5547,15 @@ class App(social.SocialMixin, social.MoreSocialMixin, social.CustomizeMixin, tk.
             return False
         if rule.get("kind") == "backup":
             return self.run_backup_rule(rule)
+        import safety
+        if safety.left("auto_delete") <= 0:
+            if manual:
+                messagebox.showinfo(APP_NAME, "Safe mode: today's limit for automatic deletes "
+                                              "is reached. The rule continues tomorrow.")
+            return False
         d = dict(rule["options"], dry_run=False)
         d.setdefault("parallel", 2)
+        d = safety.harden_rule_options(d)
         try:
             opts = self.options_from_dict(d)
         except (KeyError, ValueError) as e:
@@ -5837,7 +5879,9 @@ def main():
     threading.excepthook = lambda a: applog.write(
         "THREAD CRASH\n" + applog.crash_text(a.exc_type, a.exc_value, a.exc_traceback))
     windows_setup(read_json(settings_path(), {}))
-    App().mainloop()
+    app = App()
+    app.start_hidden_if_asked()
+    app.mainloop()
 
 
 if __name__ == "__main__":

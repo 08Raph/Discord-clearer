@@ -211,10 +211,12 @@ class SocialMixin:
         menu.add_command(label=i18n.tr("Set a custom status…"), command=self.ask_custom_status)
         menu.add_command(label=i18n.tr("Edit my profile…"), command=self.open_profile_editor)
         menu.add_command(label=i18n.tr("My profile card"), command=lambda: self.open_profile(self.me))
+        if hasattr(self, "add_account_items"):
+            self.add_account_items(menu)
         try:
             x = event.x_root if event else self.winfo_pointerx()
             y = event.y_root if event else self.winfo_pointery()
-            menu.tk_popup(x, y - 160)
+            menu.tk_popup(x, y - 220)
         finally:
             menu.grab_release()
 

@@ -175,6 +175,10 @@ class DemoApi:
             return 204, None
         if p == "/users/@me/guilds":
             return 200, self.guilds
+        if parts[:3] == ["users", "@me", "guilds"] and len(parts) == 4 and method == "DELETE":
+            before = len(self.guilds)
+            self.guilds = [g for g in self.guilds if g["id"] != parts[3]]
+            return (204, None) if len(self.guilds) < before else (404, None)
         if len(parts) == 3 and parts[0] == "guilds" and parts[2] == "roles":
             return 200, [{"id": parts[1], "name": "@everyone", "color": 0},
                          {"id": "77" + parts[1][-4:], "name": "Moderators", "color": 0x3BA55C}]
@@ -261,6 +265,9 @@ class DemoApi:
         if "before" in params:
             b = int(params["before"])
             msgs = [m for m in msgs if int(m["id"]) < b]
+        if "after" in params:            # Discord returns the oldest ones after the id
+            a = int(params["after"])
+            return [m for m in msgs if int(m["id"]) > a][-limit:]
         return msgs[:limit]
 
     def _search(self, parts, params):

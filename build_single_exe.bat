@@ -32,6 +32,10 @@ echo Building ONE .exe file (easy to share, can be moved anywhere)...
   --hidden-import media ^
   --hidden-import richtext ^
   --hidden-import social ^
+  --hidden-import everyday ^
+  --hidden-import archive ^
+  --hidden-import planner ^
+  --hidden-import safety ^
   --hidden-import emojis ^
   --hidden-import i18n_keys ^
   --hidden-import lang_es ^
@@ -43,10 +47,10 @@ echo Building ONE .exe file (easy to share, can be moved anywhere)...
   main.py || (echo Build failed. & pause & exit /b 1)
 
 echo Making the zip to share...
-powershell -NoProfile -Command "Compress-Archive -Force -Path 'dist_single\DiscordMessageCleaner.exe','README.md','LICENSE' -DestinationPath 'dist_single\DiscordMessageCleaner_v7.5.0_windows.zip'"
+powershell -NoProfile -Command "Compress-Archive -Force -Path 'dist_single\DiscordMessageCleaner.exe','README.md','LICENSE' -DestinationPath 'dist_single\DiscordMessageCleaner_v7.6.0_windows.zip'"
 
 echo.
 echo Done! Your single .exe is here:  %~dp0dist_single\DiscordMessageCleaner.exe
-echo and a ready-to-share zip:        %~dp0dist_single\DiscordMessageCleaner_v7.5.0_windows.zip
+echo and a ready-to-share zip:        %~dp0dist_single\DiscordMessageCleaner_v7.6.0_windows.zip
 explorer "%~dp0dist_single"
 pause

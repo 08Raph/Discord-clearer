@@ -59,7 +59,7 @@ jobs:
           --add-data "icon_32.png;." --add-data "icon_48.png;." --add-data "icon_64.png;."
           --add-data "icon_256.png;."
           --hidden-import app --hidden-import tray --hidden-import media
-          --hidden-import richtext --hidden-import social --hidden-import emojis --hidden-import pystray._win32
+          --hidden-import richtext --hidden-import social --hidden-import everyday --hidden-import archive --hidden-import planner --hidden-import safety --hidden-import emojis --hidden-import pystray._win32
           --hidden-import i18n_keys --hidden-import lang_es --hidden-import lang_pt --hidden-import lang_de
           main.py
 
@@ -74,7 +74,7 @@ jobs:
           --add-data "icon_32.png;." --add-data "icon_48.png;." --add-data "icon_64.png;."
           --add-data "icon_256.png;."
           --hidden-import app --hidden-import tray --hidden-import media
-          --hidden-import richtext --hidden-import social --hidden-import emojis --hidden-import pystray._win32
+          --hidden-import richtext --hidden-import social --hidden-import everyday --hidden-import archive --hidden-import planner --hidden-import safety --hidden-import emojis --hidden-import pystray._win32
           --hidden-import i18n_keys --hidden-import lang_es --hidden-import lang_pt --hidden-import lang_de
           main.py
 

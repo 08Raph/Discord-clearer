@@ -130,16 +130,27 @@ def run_rule(rule, token, log=applog.write, should_stop=lambda: False, sleep=tim
     except Exception:
         pass
     backup = os.path.join(os.path.expanduser("~"), "Documents", "Discord Cleaner Backups")
-    opts = core.options_from_dict(dict(rule["options"], dry_run=False), keep, backup)
-    opts.pacer = core.Pacer(opts.delay, auto=rule["options"].get("auto_speed", True))
+    import safety
+    o = safety.harden_rule_options(dict(rule["options"], dry_run=False))
+    opts = core.options_from_dict(o, keep, backup)
+    opts.pacer = core.Pacer(opts.delay, auto=o.get("auto_speed", True))
+    hit = []
+    safety.harden_pacer(opts.pacer, stop=lambda: hit.append(1))
+    if hit:
+        log(f"Auto-clean rule '{rule['name']}': daily safety limit reached, skipped until tomorrow.")
+        return 0
+    first_stop = should_stop
+    should_stop = lambda: bool(hit) or first_stop()   # noqa: E731
 
     def make_api():
         return core.DiscordApi(token, log, should_stop, sleep, pacer=opts.pacer)
     log(f"Auto-clean rule '{rule['name']}': {describe(rule)}")
     results = core.run_many(make_api, opts, rule["targets"],
-                            int(rule["options"].get("parallel", 2) or 2), log, progress,
+                            int(o.get("parallel", 2) or 2), log, progress,
                             should_stop, sleep)
     deleted = sum(r.get("deleted", 0) for r in results)
+    if hit:
+        log(f"Auto-clean rule '{rule['name']}': daily safety limit reached, the rest waits for tomorrow.")
     log(f"Auto-clean rule '{rule['name']}' finished: {deleted} deleted.")
     return deleted
 

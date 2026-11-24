@@ -25,6 +25,12 @@ class Tray:
                              ui(lambda: app.show_from_tray("deleted"))),
             pystray.MenuItem(i18n.tr("Saved messages"),
                              ui(lambda: (app.show_from_tray(), app.open_bookmarks()))),
+            pystray.MenuItem(i18n.tr("Search the archive"),
+                             ui(lambda: (app.show_from_tray(), app.open_archive()))),
+            pystray.MenuItem(i18n.tr("Reminders"),
+                             ui(lambda: (app.show_from_tray(), app.open_reminders()))),
+            pystray.MenuItem(i18n.tr("Everyday tools"),
+                             ui(lambda: (app.show_from_tray(), app.open_tools()))),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem(i18n.tr("Quit"), ui(app.quit_app)))
         self.icon = pystray.Icon("DiscordMessageCleaner", img, "Discord Message Cleaner", menu)

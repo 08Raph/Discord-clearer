@@ -2,7 +2,7 @@
 ; Build with build_installer.bat, or open this file in Inno Setup and press Compile.
 
 #define MyAppName "Discord Message Cleaner"
-#define MyAppVersion "7.5.0"
+#define MyAppVersion "7.6.0"
 #define MyAppPublisher "08Raph"
 #define MyAppExeName "DiscordMessageCleaner.exe"
 
