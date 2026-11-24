@@ -473,6 +473,14 @@ T = [
     "Exportar historial de ediciones…",
     "Abrir el último chat al iniciar",
     "Darme 10 segundos para deshacer al borrar un mensaje",
+    "Color de acento",
+    "Tamaño de todo",
+    "Mensajes compactos (menos espacio entre personas)",
+    "Reloj de 24 horas (20:15 en vez de 8:15 PM)",
+    "¿Reiniciar la app ahora para usar el nuevo estilo?",
+    "Medianoche",
+    "Bosque",
+    "Uva",
 ]
 
 P = [

@@ -1290,3 +1290,65 @@ class MoreSocialMixin:
             bar = tk.Frame(r, bg=A.RED, height=10, width=max(4, int(380 * n / best[0][1])))
             bar.pack(side="left", padx=6)
             tk.Label(r, text=str(n), notr=True, bg=A.CHAT, fg=A.MUTED, font=(A.FONT, 9)).pack(side="left")
+
+
+class CustomizeMixin:
+    """Settings → Customize: accent colour, size of everything, compact messages, 24-hour clock."""
+
+    def apply_ui_scale(self):
+        scale = float(self.settings.get("ui_scale", 1.0) or 1.0)
+        if abs(scale - 1.0) < 0.01:
+            return
+        try:
+            base = float(self.tk.call("tk", "scaling"))
+            self.tk.call("tk", "scaling", base * scale)
+        except (tk.TclError, ValueError, TypeError):
+            pass
+
+    def build_customize(self, b, top):
+        A = self._A
+        import widgets
+        A.section_label(b, "Accent colour", A.CHAT).pack(anchor="w", pady=(14, 6))
+        row = tk.Frame(b, bg=A.CHAT)
+        row.pack(fill="x")
+        cur = self.settings.get("accent", "blurple")
+        for name, (col, _hi) in widgets.ACCENTS.items():
+            cell = tk.Frame(row, bg=A.WHITE if name == cur else A.CHAT, padx=2, pady=2)
+            cell.pack(side="left", padx=(0, 6))
+            sw = tk.Label(cell, text="✓" if name == cur else " ", notr=True, bg=col, fg="white",
+                          font=(A.FONT, 10, "bold"), width=3, height=1, cursor="hand2")
+            sw.pack()
+            sw.bind("<Button-1>", lambda e, n=name: self.set_look("accent", n, top))
+        A.section_label(b, "Size of everything", A.CHAT).pack(anchor="w", pady=(14, 6))
+        srow = tk.Frame(b, bg=A.CHAT)
+        srow.pack(fill="x")
+        cur_s = float(self.settings.get("ui_scale", 1.0) or 1.0)
+        for v in (0.9, 1.0, 1.1, 1.25, 1.5):
+            on = abs(v - cur_s) < 0.01
+            bt = tk.Label(srow, text=f"{int(v * 100)}%", notr=True,
+                          bg=A.BLURPLE if on else A.INPUT, fg="white" if on else A.TEXT,
+                          font=(A.FONT, 9, "bold"), padx=12, pady=5, cursor="hand2")
+            bt.pack(side="left", padx=(0, 6))
+            bt.bind("<Button-1>", lambda e, v=v: self.set_look("ui_scale", v, top))
+        for key, label in (("compact", "Compact messages (less space between people)"),
+                           ("clock_24h", "24-hour clock (20:15 instead of 8:15 PM)")):
+            var = tk.BooleanVar(value=bool(self.settings.get(key)))
+
+            def changed(k=key, v=var):
+                self.settings[k] = v.get()
+                self.save_settings()
+                core.CLOCK_24 = bool(self.settings.get("clock_24h"))
+                if self.preview:
+                    self.render_preview(scroll="keep")
+            A.OptionCheck(b, label, var, A.CHAT, command=changed).pack(anchor="w", pady=(6, 0))
+
+    def set_look(self, key, value, top=None):
+        if self.settings.get(key) == value:
+            return
+        self.settings[key] = value
+        self.save_settings()
+        if self._A.messagebox.askyesno(self._A.APP_NAME,
+                                       i18n.tr("Restart the app now to use the new look?")):
+            if top is not None:
+                top.destroy()
+            self.restart()

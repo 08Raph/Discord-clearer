@@ -739,6 +739,14 @@ FR.update({
     "Export edit history…": "Exporter l'historique des modifications…",
     "Open the last chat when the app starts": "Ouvrir le dernier chat au démarrage",
     "Give me 10 seconds to undo when I delete one message": "Me laisser 10 secondes pour annuler quand je supprime un message",
+    "Accent colour": "Couleur d'accent",
+    "Size of everything": "Taille de l'interface",
+    "Compact messages (less space between people)": "Messages compacts (moins d'espace entre les personnes)",
+    "24-hour clock (20:15 instead of 8:15 PM)": "Horloge 24 h (20:15 au lieu de 8:15 PM)",
+    "Restart the app now to use the new look?": "Redémarrer l'app maintenant pour appliquer le nouveau style ?",
+    "Midnight": "Minuit",
+    "Forest": "Forêt",
+    "Grape": "Raisin",
 })
 
 PATTERNS = [

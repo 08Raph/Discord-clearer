@@ -44,7 +44,7 @@ i18n.install()            # must run before any widget is created
 core.LANG = i18n.LANG
 
 APP_NAME = "Discord Message Cleaner"
-VERSION = "7.4.0"
+VERSION = "7.5.0"
 PREVIEW_PAGE = 50
 LOCAL = ("pkg", "deleted")      # previews that come from a local list, not from Discord
 EDIT_BAR = "#f0b232"
@@ -219,7 +219,7 @@ class DemoBound:
         return self.data.request(method, path, body, files)
 
 
-class App(social.SocialMixin, social.MoreSocialMixin, tk.Tk):
+class App(social.SocialMixin, social.MoreSocialMixin, social.CustomizeMixin, tk.Tk):
     def __init__(self):
         super().__init__()
         self.title(f"{APP_NAME} v{VERSION}")
@@ -230,6 +230,8 @@ class App(social.SocialMixin, social.MoreSocialMixin, tk.Tk):
 
         self.images = ImageLoader(self, cache_dir())
         self.settings = self.load_settings()
+        self.apply_ui_scale()
+        core.CLOCK_24 = bool(self.settings.get("clock_24h"))
         self.stop_event = threading.Event()
         self.pause_event = threading.Event()
         self.running = False
@@ -2406,7 +2408,8 @@ class App(social.SocialMixin, social.MoreSocialMixin, tk.Tk):
         if new_day:
             self.date_divider(self.messages.inner, day, before=spacer)
         head = (prev is None or new_day or prev["author"]["id"] != m["author"]["id"]
-                or abs(core_ts(m) - core_ts(prev)) > 7 * 60 or m.get("message_reference"))
+                or core.is_system(prev) or abs(core_ts(m) - core_ts(prev)) > 7 * 60
+                or m.get("message_reference"))
         self.render_message(self.messages.inner, m, head, width, before=spacer)
         self.refresh_highlights()
         if at_bottom:
@@ -2842,7 +2845,7 @@ class App(social.SocialMixin, social.MoreSocialMixin, tk.Tk):
                 self.date_divider(inner, day)
                 prev_day = day
             head = (prev is None or new_day or prev["author"]["id"] != m["author"]["id"]
-                    or abs(core_ts(m) - core_ts(prev)) > 7 * 60
+                    or core.is_system(prev) or abs(core_ts(m) - core_ts(prev)) > 7 * 60
                     or m.get("message_reference"))
             self.render_message(inner, m, head, width)
             prev = m
@@ -2870,10 +2873,44 @@ class App(social.SocialMixin, social.MoreSocialMixin, tk.Tk):
                  font=(FONT, 8, "bold"), padx=6).pack(side="left")
         tk.Frame(f, bg=DIVIDER, height=1).pack(side="left", fill="x", expand=True, pady=(1, 0))
 
+    def render_system(self, parent, m, before=None):
+        """Calls, pins, people joining… shown as one grey line, like Discord."""
+        icon, text = core.system_text(m, (self.me or {}).get("id"))
+        row = tk.Frame(parent, bg=CHAT)
+        row.pack(fill="x", pady=(8, 0), **({"before": before} if before else {}))
+        bar = tk.Frame(row, bg=CHAT, width=3)
+        bar.pack(side="left", fill="y")
+        left = tk.Frame(row, bg=CHAT, width=68)
+        left.pack(side="left", fill="y")
+        left.pack_propagate(False)
+        colour = GREEN if icon in ("➜", "📞") and "missed" not in text.lower() else (
+            RED if icon == "📞" else MUTED)
+        tk.Label(left, text=icon, notr=True, bg=CHAT, fg=colour,
+                 font=("Segoe UI Emoji", 11)).pack(pady=(2, 0))
+        tag = tk.Label(row, text="", bg=CHAT, fg=RED, font=(FONT, 7, "bold"))
+        content = tk.Frame(row, bg=CHAT)
+        content.pack(side="left", fill="x", expand=True, padx=(0, 12), pady=3)
+        line = tk.Frame(content, bg=CHAT)
+        line.pack(fill="x")
+        tk.Label(line, text=text, notr=True, bg=CHAT, fg=MUTED, font=(FONT, 10), anchor="w",
+                 justify="left", wraplength=700).pack(side="left")
+        tk.Label(line, text="  " + core.format_time(m.get("timestamp")), notr=True, bg=CHAT,
+                 fg=MUTED, font=(FONT, 8)).pack(side="left", pady=(2, 0))
+        react_row = tk.Frame(content, bg=CHAT)
+        info = {"msg": m, "row": row, "bar": bar, "tag": tag, "content": content,
+                "react_row": react_row, "matched": "unset", "fixed": [bar], "time": None,
+                "mention": False, "bg": CHAT, "hover": False, "system": True}
+        self.msg_rows.append(info)
+        self.row_by_id[m.get("id")] = info
+        bind_tree(row, "<Button-3>", lambda e, info=info: self.message_menu(e, info))
+
     def render_message(self, parent, m, head, width, before=None):
+        if core.is_system(m) and m.get("type") != 21:
+            return self.render_system(parent, m, before)
         author = m.get("author", {})
         row = tk.Frame(parent, bg=CHAT)
-        row.pack(fill="x", pady=(14 if head else 0, 0), **({"before": before} if before else {}))
+        row.pack(fill="x", pady=((4 if self.settings.get("compact") else 14) if head else 0, 0),
+                 **({"before": before} if before else {}))
         bar = tk.Frame(row, bg=CHAT, width=3)
         bar.pack(side="left", fill="y")
         left = tk.Frame(row, bg=CHAT, width=68)
@@ -2916,7 +2953,7 @@ class App(social.SocialMixin, social.MoreSocialMixin, tk.Tk):
 
         raw = m.get("content") or ""
         if m.get("type") not in core.DELETABLE_TYPES and not raw:
-            raw = "[system message]"
+            raw = core.system_text(m, (self.me or {}).get("id"))[1]
         fixed = []      # widgets that keep their own colour on hover/highlight
         jumbo = emojis.only_emojis(raw)
         mentions = m.get("mentions", [])
@@ -4913,16 +4950,18 @@ class App(social.SocialMixin, social.MoreSocialMixin, tk.Tk):
         th = tk.Frame(b, bg=CHAT)
         th.pack(fill="x")
         current = self.settings.get("theme", "dark")
-        swatches = {"dark": ("#313338", "#f2f3f5"), "black": ("#000000", "#f2f3f5"),
-                    "light": ("#ffffff", "#060607")}
-        for name, label in widgets.THEME_NAMES.items():
-            bgc, fgc = swatches[name]
+        for i, (name, label) in enumerate(widgets.THEME_NAMES.items()):
+            if i == 3:
+                th = tk.Frame(b, bg=CHAT)
+                th.pack(fill="x", pady=(8, 0))
+            bgc, fgc = widgets.THEME_SWATCHES[name]
             cell = tk.Frame(th, bg=BLURPLE if name == current else SIDEBAR, padx=3, pady=3)
             cell.pack(side="left", padx=(0, 10))
             sw = tk.Label(cell, text=label, bg=bgc, fg=fgc, font=(FONT, 9, "bold"), width=12,
                           height=3, cursor="hand2")
             sw.pack()
             sw.bind("<Button-1>", lambda e, n=name: self.set_theme(n, top))
+        self.build_customize(b, top)
 
         FlatButton(b, "Edit my profile (display name, About me, status)…",
                    lambda: (top.destroy(), self.open_profile_editor()), bg=SELECTED, hover=HOVER,

@@ -474,6 +474,14 @@ T = [
     "Exportar histórico de edições…",
     "Abrir o último chat ao iniciar",
     "Me dar 10 segundos para desfazer ao apagar uma mensagem",
+    "Cor de destaque",
+    "Tamanho de tudo",
+    "Mensagens compactas (menos espaço entre pessoas)",
+    "Relógio de 24 horas (20:15 em vez de 8:15 PM)",
+    "Reiniciar o app agora para usar o novo visual?",
+    "Meia-noite",
+    "Floresta",
+    "Uva",
 ]
 
 P = [

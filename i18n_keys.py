@@ -467,7 +467,15 @@ KEYS = [
 "Who deletes the most",
 "Export edit history…",
 "Open the last chat when the app starts",
-"Give me 10 seconds to undo when I delete one message"
+"Give me 10 seconds to undo when I delete one message",
+"Accent colour",
+"Size of everything",
+"Compact messages (less space between people)",
+"24-hour clock (20:15 instead of 8:15 PM)",
+"Restart the app now to use the new look?",
+"Midnight",
+"Forest",
+"Grape"
 ]
 PATTERN_KEYS = [
 "^SELECTED  \\((\\d+)\\)$",

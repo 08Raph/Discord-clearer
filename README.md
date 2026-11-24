@@ -9,6 +9,14 @@ in a window that works like Discord.
 
 **Website:** see `docs/` (GitHub Pages) · **Download:** the Releases page
 
+## What's new in 7.5
+- **Calls, pins and people joining** show like in Discord ("Alex started a call that lasted 5
+  minutes.", "You missed a call from Alex.") instead of "[system message]".
+- **Customize**: 6 themes (Dark, Black, Light, Midnight, Forest, Grape), 8 accent colours, size of
+  everything (90–150%), compact messages and a 24-hour clock.
+- **Automatic releases**: when a new version reaches `main`, GitHub builds the .exe and publishes
+  the release by itself.
+
 ## What's new in 7.4
 - **Mute** any DM, channel or server, or get **only @mentions** (right-click it). Servers show an
   unread mark and turn red when you're mentioned. **Ctrl+Shift+M** mutes the open chat.
@@ -152,8 +160,8 @@ your PC (Syncthing is free) and pick it once with **Auto-import a synced file…
 - Counts how many messages you've cleaned in total; flashes the taskbar when a run ends
 
 ## Install
-Run `DiscordMessageCleaner-Setup-7.4.0.exe` and follow the wizard (no admin rights needed),
-or unzip `DiscordMessageCleaner_v7.4.0_windows.zip` and run the .exe.
+Run `DiscordMessageCleaner-Setup-7.5.0.exe` and follow the wizard (no admin rights needed),
+or unzip `DiscordMessageCleaner_v7.5.0_windows.zip` and run the .exe.
 It adds a Start menu shortcut, an optional desktop icon, and an uninstaller.
 
 ## How to use
@@ -178,7 +186,7 @@ Messages in servers you've left can't be deleted. The app skips those chats.
 2. **Website**: Settings → Pages → Source: *Deploy from a branch* → Branch `main`, folder
    `/docs` → Save. After a minute it's live at `https://YOUR-NAME.github.io/REPO/`.
    The download buttons find your latest release by themselves.
-3. **The .exe**: Releases → *Draft a new release* → tag `v7.4.0` → Publish. GitHub builds
+3. **The .exe**: push to `main` with a new VERSION in app.py (or publish a release with tag `v7.5.0`). GitHub builds
    the single .exe zip and the setup wizard on a Windows machine (Actions tab, ~5 min) and
    attaches them to the release. Free for public repos. Next version: change `VERSION` in
    `app.py` (+ `version_info.txt`, `installer.iss`) and publish a new tag.

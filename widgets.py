@@ -54,23 +54,51 @@ THEMES = {
                   THUMB_ALT="#c4c9ce", CODE_BORDER="#e3e5e8", REACT_ME_BG="#e6e8fd",
                   ICON_MUTED="#5c5e66", LOG_BG="#ebedef"),
 }
-THEME_NAMES = {"dark": "Dark", "black": "Black (OLED)", "light": "Light"}
+THEMES["midnight"] = dict(THEMES["dark"], RAIL="#0f1424", SIDEBAR="#161c30", CHAT="#1c2338",
+                          USERBAR="#121829", INPUT="#121829", HOVER="#232b44", SELECTED="#2c3552",
+                          DIVIDER="#2c3552", BORDER="#121829", MSG_HOVER="#20283f",
+                          CODE_BG="#161c30", FIELD_BG="#252e48", LOG_BG="#121829",
+                          THUMB="#0f1424", THUMB_ALT="#2c3552", MATCH_BG="#3a2433",
+                          KEEP_BG="#1d3330", MENTION_BG="#363423")
+THEMES["forest"] = dict(THEMES["dark"], RAIL="#121a15", SIDEBAR="#18231c", CHAT="#1e2b22",
+                        USERBAR="#141d17", INPUT="#141d17", HOVER="#253428", SELECTED="#2e4033",
+                        DIVIDER="#2e4033", BORDER="#141d17", MSG_HOVER="#223026",
+                        CODE_BG="#18231c", FIELD_BG="#283a2d", LOG_BG="#141d17",
+                        THUMB="#121a15", THUMB_ALT="#2e4033", MATCH_BG="#3b2528",
+                        KEEP_BG="#1f3a26", MENTION_BG="#36351f")
+THEMES["grape"] = dict(THEMES["dark"], RAIL="#1a1425", SIDEBAR="#221a31", CHAT="#2a2040",
+                       USERBAR="#1d162a", INPUT="#1d162a", HOVER="#33284b", SELECTED="#3d3059",
+                       DIVIDER="#3d3059", BORDER="#1d162a", MSG_HOVER="#30254a",
+                       CODE_BG="#221a31", FIELD_BG="#372b51", LOG_BG="#1d162a",
+                       THUMB="#1a1425", THUMB_ALT="#3d3059", MATCH_BG="#43243a",
+                       KEEP_BG="#23343a", MENTION_BG="#3d3526")
+THEME_NAMES = {"dark": "Dark", "black": "Black (OLED)", "light": "Light", "midnight": "Midnight",
+               "forest": "Forest", "grape": "Grape"}
+THEME_SWATCHES = {k: (v["CHAT"], v["WHITE"]) for k, v in THEMES.items()}
+ACCENTS = {"blurple": ("#5865f2", "#4752c4"), "green": ("#23a55a", "#1a8048"),
+           "red": ("#da373c", "#a12828"), "pink": ("#eb459f", "#c13584"),
+           "orange": ("#f0883e", "#c96d2c"), "teal": ("#1abc9c", "#138d75"),
+           "purple": ("#9b59b6", "#7d3c98"), "gold": ("#f0b232", "#c28f22")}
 
 
-def _saved_theme():
+def _saved_look():
+    """(theme, accent) from the settings file, read before any widget is built."""
     try:
         import json
         root = os.environ.get("APPDATA") or os.path.expanduser("~/.config")
         with open(os.path.join(root, "DiscordMessageCleaner", "settings.json"),
                   encoding="utf-8") as f:
-            name = json.load(f).get("theme", "dark")
-        return name if name in THEMES else "dark"
+            st = json.load(f)
+        name = st.get("theme", "dark")
+        accent = st.get("accent", "blurple")
+        return (name if name in THEMES else "dark"), (accent if accent in ACCENTS else "blurple")
     except Exception:
-        return "dark"
+        return "dark", "blurple"
 
 
-THEME = _saved_theme()
+THEME, ACCENT = _saved_look()
 globals().update(THEMES[THEME])
+BLURPLE, BLURPLE_HI = ACCENTS[ACCENT]
 AVATAR_COLORS = ["#5865f2", "#757e8a", "#3ba55c", "#faa61a", "#ed4245", "#eb459f"]
 
 

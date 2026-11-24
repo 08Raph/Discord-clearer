@@ -474,6 +474,14 @@ T = [
     "Bearbeitungsverlauf exportieren…",
     "Beim Start den letzten Chat öffnen",
     "10 Sekunden zum Rückgängigmachen beim Löschen einer Nachricht",
+    "Akzentfarbe",
+    "Größe von allem",
+    "Kompakte Nachrichten (weniger Abstand)",
+    "24-Stunden-Uhr (20:15 statt 8:15 PM)",
+    "App jetzt neu starten, um das neue Aussehen zu nutzen?",
+    "Mitternacht",
+    "Wald",
+    "Traube",
 ]
 
 P = [
