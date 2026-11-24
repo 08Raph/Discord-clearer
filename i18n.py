@@ -925,6 +925,27 @@ FR.update({
     '{u} today': "{u} aujourd'hui",
 })
 
+FR.update({
+    "Risk tab": "Onglet Risque",
+    "These actions use your account like a bot. Discord's rules don't allow that, and accounts have been limited, disabled or banned for it, even at slow speeds. They are OFF by default. Turn one on only if you accept that risk.": "Ces actions utilisent ton compte comme un robot. Les règles de Discord ne l'autorisent pas, et des comptes ont été limités, désactivés ou bannis pour ça, même à faible vitesse. Elles sont désactivées par défaut. N'en active une que si tu acceptes ce risque.",
+    "Delete messages (the cleaner)": "Supprimer des messages (le nettoyeur)",
+    "Automatic clean-up rules that delete": "Règles de nettoyage automatique qui suppriment",
+    "Privacy sweeper (leave servers, close DMs, remove friends)": "Nettoyage de confidentialité (quitter des serveurs, fermer des MP, retirer des amis)",
+    "Scheduled messages (send later)": "Messages programmés (envoyer plus tard)",
+    "Turn off all risky features": "Désactiver toutes les fonctions risquées",
+    "Always safe: Preview, archive and search, your year, reminders, saved replies and keyword alerts. They only read, or work on this PC.": "Toujours sans danger : l'aperçu, l'archive et la recherche, ton année, les rappels, les réponses enregistrées et les alertes de mots. Ils ne font que lire ou travaillent sur ce PC.",
+    "Before you start": "Avant de commencer",
+    "This app uses your Discord account the way a bot would. Discord's rules don't allow that, and accounts using tools like this have been limited, disabled or banned, even with slow settings. The risky actions (deleting in bulk, clean-up rules, privacy sweeper, scheduled messages) are switched off until you turn them on in the Risk tab. Reading features (archive, search, your year, reminders, alerts and Preview) are low risk.": "Cette app utilise ton compte Discord comme le ferait un robot. Les règles de Discord ne l'autorisent pas, et des comptes utilisant ce genre d'outils ont été limités, désactivés ou bannis, même avec des réglages lents. Les actions risquées (suppression en masse, règles de nettoyage, nettoyage de confidentialité, messages programmés) sont désactivées tant que tu ne les actives pas dans l'onglet Risque. Les fonctions de lecture (archive, recherche, ton année, rappels, alertes et aperçu) présentent peu de risque.",
+    "I understand": "Je comprends",
+    "Open Risk tab": "Ouvrir l'onglet Risque",
+    "'{name}' is a risky feature and it is switched off.\n\nTurn it on in the Risk tab if you accept the risk. Preview (delete nothing) always works.\n\nOpen the Risk tab now?": "« {name} » est une fonction risquée et elle est désactivée.\n\nActive-la dans l'onglet Risque si tu acceptes le risque. L'aperçu (ne supprime rien) fonctionne toujours.\n\nOuvrir l'onglet Risque maintenant ?",
+    "Turn on '{name}'? This is against Discord's rules and your account may be limited, disabled or banned. You do this at your own risk.": "Activer « {name} » ? C'est contre les règles de Discord et ton compte peut être limité, désactivé ou banni. Tu le fais à tes propres risques.",
+    "{n} of {m} risky features on": "{n} fonction(s) risquée(s) sur {m} activée(s)",
+    "Risky feature is off: nothing was deleted. Turn it on in the Risk tab if you accept the risk.": "Fonction risquée désactivée : rien n'a été supprimé. Active-la dans l'onglet Risque si tu acceptes le risque.",
+    "Scheduled messages are a risky feature and are off": "Les messages programmés sont une fonction risquée et sont désactivés",
+    "Risk tab (risky features, off by default)…": "Onglet Risque (fonctions risquées, désactivées par défaut)…",
+})
+
 PATTERNS = [
     (r"^SELECTED  \((\d+)\)$", r"SÉLECTION  (\1)"),
     (r"^Direct messages  \((\d+)\)$", r"Messages privés  (\1)"),

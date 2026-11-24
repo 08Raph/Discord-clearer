@@ -27,6 +27,7 @@ import rules
 import securestore
 import emojis
 import everyday
+import safety
 import media
 import richtext
 import social
@@ -45,7 +46,7 @@ i18n.install()            # must run before any widget is created
 core.LANG = i18n.LANG
 
 APP_NAME = "Discord Message Cleaner"
-VERSION = "7.6.0"
+VERSION = "7.7.0"
 PREVIEW_PAGE = 50
 LOCAL = ("pkg", "deleted")      # previews that come from a local list, not from Discord
 EDIT_BAR = "#f0b232"
@@ -4995,6 +4996,9 @@ class App(social.SocialMixin, social.MoreSocialMixin, social.CustomizeMixin,
         FlatButton(b, "Everyday tools (archive, reminders, send later, alerts, safe mode)…",
                    lambda: (top.destroy(), self.open_tools()), font_size=9, padx=10,
                    pady=5).pack(anchor="w", pady=(8, 0))
+        FlatButton(b, "Risk tab (risky features, off by default)…",
+                   lambda: (top.destroy(), self.open_risk()), bg=SELECTED, hover=HOVER,
+                   font_size=9, padx=10, pady=5).pack(anchor="w", pady=(8, 0))
         FlatButton(b, "Edit my profile (display name, About me, status)…",
                    lambda: (top.destroy(), self.open_profile_editor()), bg=SELECTED, hover=HOVER,
                    font_size=9, padx=10, pady=5).pack(anchor="w", pady=(8, 0))
@@ -5250,6 +5254,8 @@ class App(social.SocialMixin, social.MoreSocialMixin, social.CustomizeMixin,
         except ValueError as e:
             messagebox.showerror("Check your settings", str(e))
             return
+        if not opts.dry_run and not self.risk_gate("delete"):
+            return
         if not opts.dry_run:
             what = (f"your messages containing: {', '.join(opts.keywords)}"
                     if opts.keywords else "ALL your messages")
@@ -5277,6 +5283,13 @@ class App(social.SocialMixin, social.MoreSocialMixin, social.CustomizeMixin,
 
     def launch(self, opts, d, targets, resumed=False):
         """Start a run. Real (non-preview) runs are saved as a job so they can be resumed."""
+        if not opts.dry_run:      # last line of defence: risky runs need the Risk tab switch
+            feat = "rules" if getattr(self, "_running_rule", None) is not None else "delete"
+            if not safety.risk_on(feat):
+                self._running_rule = None
+                self.log(i18n.tr("Risky feature is off: nothing was deleted. Turn it on in the "
+                                 "Risk tab if you accept the risk."), "bad")
+                return
         self._save_first_now = bool(d.get("save_first")) and not resumed
         self._close_after = ([t for t in targets if t.get("is_dm")]
                              if d.get("close_dms") and not opts.dry_run else None)
@@ -5292,7 +5305,6 @@ class App(social.SocialMixin, social.MoreSocialMixin, social.CustomizeMixin,
         self.stop_event.clear()
         self.pause_event.clear()
         if getattr(self, "_running_rule", None) is not None and not opts.dry_run:
-            import safety
             safety.harden_pacer(self.pacer, stop=self.on_safety_limit)
         self.running = True
         self.current_dry = opts.dry_run
@@ -5334,6 +5346,8 @@ class App(social.SocialMixin, social.MoreSocialMixin, social.CustomizeMixin,
         self.save_job()
 
     def check_unfinished_job(self):
+        if not safety.risk_on("delete"):
+            return          # deleting is switched off; the saved job waits
         job = read_json(app_data_file("job.json"), None)
         if not job or not isinstance(job, dict) or not job.get("targets"):
             return
@@ -5547,7 +5561,10 @@ class App(social.SocialMixin, social.MoreSocialMixin, social.CustomizeMixin,
             return False
         if rule.get("kind") == "backup":
             return self.run_backup_rule(rule)
-        import safety
+        if not safety.risk_on("rules"):
+            if manual:
+                self.risk_gate("rules")
+            return False
         if safety.left("auto_delete") <= 0:
             if manual:
                 messagebox.showinfo(APP_NAME, "Safe mode: today's limit for automatic deletes "

@@ -68,6 +68,7 @@ class EverydayMixin:
         self.after(4000, self.planner_tick)
         if self.demo is None:
             self.after(2 * 60 * 1000, self.archive_auto_tick)
+            self.after(1500, self.first_launch_warning)
 
     def chat_name_of(self, cid, gid=None):
         for d in self.dms or []:
@@ -153,6 +154,12 @@ class EverydayMixin:
             self.send_scheduled(x)
 
     def send_scheduled(self, x, manual=False):
+        if not safety.risk_on("send"):
+            planner.update_send(x["id"], status="missed",
+                                error=i18n.tr("Scheduled messages are a risky feature and are off"))
+            if manual:
+                self.risk_gate("send")
+            return
         if safety.left("send") <= 0:
             planner.update_send(x["id"], status="missed",
                                 error=i18n.tr("Safe mode: daily limit for scheduled messages"))
@@ -216,6 +223,8 @@ class EverydayMixin:
             ("🧽", "Privacy sweeper", "Leave servers, close old DMs, find inactive friends",
              self.open_sweeper),
             ("🛡", "Safe mode", "On" if safety.enabled() else "Off", self.open_safety),
+            ("⚠", "Risk tab", _t("{n} of {m} risky features on", n=safety.risk_count(),
+                                 m=len(safety.RISK_FEATURES)), self.open_risk),
             ("🚀", "Start with Windows", "Open in the tray when your PC starts",
              self.open_startup),
         ]
@@ -831,6 +840,8 @@ class EverydayMixin:
         A = self._A
         if not self.can_chat():
             return
+        if not self.risk_gate("send"):
+            return
         text = self.mention_convert(self.composer.get("1.0", "end-1c").strip())
         if not text:
             A.messagebox.showinfo(A.APP_NAME, "Write the message first, then pick when to send it.")
@@ -1219,6 +1230,8 @@ class EverydayMixin:
             chosen = [(i, n) for i, (v, n) in picks.items() if v.get()]
             if not chosen:
                 return
+            if not self.risk_gate("sweeper"):
+                return
             allowed = safety.left(kind)
             if allowed <= 0:
                 A.messagebox.showinfo(A.APP_NAME, "Safe mode: today's limit for this is reached. "
@@ -1345,6 +1358,96 @@ class EverydayMixin:
                          "if Discord asks for a captcha, stop and do that action in Discord.",
                  bg=A.CHAT, fg=A.MUTED, font=(A.FONT, 8), anchor="w", wraplength=540,
                  justify="left").pack(fill="x", pady=(14, 0))
+
+    # ================================================================ risk tab
+    def risk_gate(self, feature):
+        """True when this risky feature was switched on in the Risk tab. Otherwise explain
+        and offer to open the Risk tab (nothing risky runs without it)."""
+        if safety.risk_on(feature):
+            return True
+        A = self._A
+        name = i18n.tr(safety.RISK_FEATURES[feature])
+        if A.messagebox.askyesno(A.APP_NAME, _t(
+                "'{name}' is a risky feature and it is switched off.\n\nTurn it on in the "
+                "Risk tab if you accept the risk. Preview (delete nothing) always works.\n\n"
+                "Open the Risk tab now?", name=name), icon="warning"):
+            self.open_risk()
+        return False
+
+    def open_risk(self):
+        A = self._A
+        top, b = self.dialog(i18n.tr("Risk tab"), 620, 600)
+        tk.Label(b, text="Risk tab", bg=A.CHAT, fg=A.WHITE, font=(A.FONT, 15, "bold"),
+                 anchor="w").pack(fill="x")
+        tk.Label(b, text="These actions use your account like a bot. Discord's rules don't "
+                         "allow that, and accounts have been limited, disabled or banned for "
+                         "it, even at slow speeds. They are OFF by default. Turn one on only "
+                         "if you accept that risk.", bg=A.CHAT, fg=A.RED, font=(A.FONT, 10),
+                 anchor="w", wraplength=560, justify="left").pack(fill="x", pady=(4, 12))
+        vs = {}
+        count = tk.Label(b, notr=True, text="", bg=A.CHAT, fg=A.MUTED, font=(A.FONT, 9),
+                         anchor="w")
+
+        def show_count():
+            count.configure(text=_t("{n} of {m} risky features on", n=safety.risk_count(),
+                                    m=len(safety.RISK_FEATURES)))
+
+        def toggle(k):
+            if vs[k].get() and not A.messagebox.askyesno(
+                    A.APP_NAME, _t("Turn on '{name}'? This is against Discord's rules and your "
+                                   "account may be limited, disabled or banned. You do this at "
+                                   "your own risk.", name=i18n.tr(safety.RISK_FEATURES[k])),
+                    icon="warning"):
+                vs[k].set(False)
+            safety.set_risk(k, vs[k].get())
+            show_count()
+
+        for k, label in safety.RISK_FEATURES.items():
+            vs[k] = tk.BooleanVar(value=safety.risk_on(k))
+            A.OptionCheck(b, label, vs[k], A.CHAT, command=lambda k=k: toggle(k)).pack(
+                anchor="w", pady=3)
+        count.pack(fill="x", pady=(10, 4))
+        show_count()
+
+        def off():
+            safety.all_risk_off()
+            for v in vs.values():
+                v.set(False)
+            show_count()
+        A.FlatButton(b, "Turn off all risky features", off, bg=A.SELECTED, hover=A.HOVER,
+                     font_size=9, padx=12, pady=5).pack(anchor="w", pady=(2, 12))
+        tk.Label(b, text="Always safe: Preview, archive and search, your year, reminders, "
+                         "saved replies and keyword alerts. They only read, or work on this "
+                         "PC.", bg=A.CHAT, fg=A.MUTED, font=(A.FONT, 9), anchor="w",
+                 wraplength=560, justify="left").pack(fill="x")
+        A.FlatButton(b, "Safe mode", lambda: (top.destroy(), self.open_safety()), bg=A.SELECTED,
+                     hover=A.HOVER, font_size=9, padx=12, pady=5).pack(anchor="w", pady=(12, 0))
+
+    def first_launch_warning(self):
+        """Shown once, before anything else: what this app can do to your account."""
+        if safety.warning_seen():
+            return
+        safety.set_warning_seen()
+        A = self._A
+        top, b = self.dialog(i18n.tr("Before you start"), 560, 400)
+        tk.Label(b, text="Before you start", bg=A.CHAT, fg=A.WHITE, font=(A.FONT, 15, "bold"),
+                 anchor="w").pack(fill="x")
+        tk.Label(b, text="This app uses your Discord account the way a bot would. Discord's "
+                         "rules don't allow that, and accounts using tools like this have been "
+                         "limited, disabled or banned, even with slow settings. The risky "
+                         "actions (deleting in bulk, clean-up rules, privacy sweeper, "
+                         "scheduled messages) are switched off until you turn them on in the "
+                         "Risk tab. Reading features (archive, search, your year, reminders, "
+                         "alerts and Preview) are low risk.", bg=A.CHAT, fg=A.TEXT,
+                 font=(A.FONT, 10), anchor="w", wraplength=500, justify="left").pack(
+            fill="x", pady=(8, 16))
+        bar = tk.Frame(b, bg=A.CHAT)
+        bar.pack(fill="x")
+        A.FlatButton(bar, "I understand", top.destroy, font_size=10, padx=14, pady=6).pack(
+            side="left")
+        A.FlatButton(bar, "Open Risk tab", lambda: (top.destroy(), self.open_risk()),
+                     bg=A.SELECTED, hover=A.HOVER, font_size=10, padx=14, pady=6).pack(
+            side="left", padx=8)
 
     # ================================================================ accounts + startup
     def add_account_items(self, menu):

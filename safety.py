@@ -25,6 +25,13 @@ LIMITS = {
 }
 NAMES = {"auto_delete": "Automatic deletes", "leave": "Servers left", "close": "DMs closed",
          "unfriend": "Friends removed", "send": "Scheduled messages sent"}
+# Risky features: everything that WRITES to your account on its own. All start switched off.
+RISK_FEATURES = {
+    "delete": "Delete messages (the cleaner)",
+    "rules": "Automatic clean-up rules that delete",
+    "sweeper": "Privacy sweeper (leave servers, close DMs, remove friends)",
+    "send": "Scheduled messages (send later)",
+}
 MIN_RULE_DELAY = 2.5
 JITTER = 0.45                          # +0 … +45 % random extra wait
 MAX_PENDING_SENDS = 20
@@ -153,3 +160,43 @@ def harden_pacer(pacer, stop=None, kind="auto_delete"):
 
 def summary():
     return [(k, NAMES[k], used(k), limit(k)) for k in LIMITS]
+
+
+# ------------------------------------------------------------------ risk tab
+def risk_on(feature):
+    """True only if the user switched this risky feature on in the Risk tab (default: off)."""
+    r = _read().get("risk")
+    return bool(isinstance(r, dict) and r.get(feature) is True)
+
+
+def set_risk(feature, on):
+    if feature not in RISK_FEATURES:
+        return
+    with _lock:
+        d = _read()
+        r = d.get("risk") if isinstance(d.get("risk"), dict) else {}
+        r[feature] = bool(on)
+        d["risk"] = r
+        _write(d)
+
+
+def risk_count():
+    return sum(1 for k in RISK_FEATURES if risk_on(k))
+
+
+def all_risk_off():
+    with _lock:
+        d = _read()
+        d["risk"] = {k: False for k in RISK_FEATURES}
+        _write(d)
+
+
+def warning_seen():
+    return bool(_read().get("warning_seen"))
+
+
+def set_warning_seen():
+    with _lock:
+        d = _read()
+        d["warning_seen"] = True
+        _write(d)

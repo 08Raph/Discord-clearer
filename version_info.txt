@@ -15,12 +15,12 @@ VSVersionInfo(
       StringTable('040904B0', [
         StringStruct('CompanyName', '08Raph'),
         StringStruct('FileDescription', 'Discord Message Cleaner'),
-        StringStruct('FileVersion', '7.6.0'),
+        StringStruct('FileVersion', '7.7.0'),
         StringStruct('InternalName', 'DiscordMessageCleaner'),
         StringStruct('LegalCopyright', 'Copyright (c) 2026 08Raph. MIT License.'),
         StringStruct('OriginalFilename', 'DiscordMessageCleaner.exe'),
         StringStruct('ProductName', 'Discord Message Cleaner'),
-        StringStruct('ProductVersion', '7.6.0')
+        StringStruct('ProductVersion', '7.7.0')
       ])
     ]),
     VarFileInfo([VarStruct('Translation', [1033, 1200])])

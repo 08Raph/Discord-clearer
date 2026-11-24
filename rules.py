@@ -131,6 +131,10 @@ def run_rule(rule, token, log=applog.write, should_stop=lambda: False, sleep=tim
         pass
     backup = os.path.join(os.path.expanduser("~"), "Documents", "Discord Cleaner Backups")
     import safety
+    if not safety.risk_on("rules"):
+        log(f"Auto-clean rule '{rule['name']}' skipped: deleting rules are a risky feature and "
+            "are switched off in the Risk tab.")
+        return 0
     o = safety.harden_rule_options(dict(rule["options"], dry_run=False))
     opts = core.options_from_dict(o, keep, backup)
     opts.pacer = core.Pacer(opts.delay, auto=o.get("auto_speed", True))
